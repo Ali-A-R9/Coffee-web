@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Register</title>
+    <link rel="stylesheet" href="../css/styles.css"></head>
+
+<body class="container">
+  <div class="card">
+    <h1>Register</h1>
+
+      <form id="registerForm" class="form-inline" novalidate>
+        <label>Name</label>
+        <input id="registerName" type="text" required>
+
+        <label>Email</label>
+        <input id="registerEmail" type="email" required>
+
+        <label>Password</label>
+        <input id="registerPassword" type="password" required>
+
+        <button type="submit">Create account</button>
+        <p id="registerMsg" class="error" aria-live="polite"></p>
+      </form>
+
+
+    <div class="link">
+      Already have an account?
+      <a href="Login.html">Login</a>
+    </div>
+  </div>
+
+  <script src="../script/app.js"></script>
+</body>
+</html>
