@@ -11,9 +11,29 @@
   <div class="card">
     <h1>Dashboard</h1>
 
-    <button id="logoutBtn" class="ghost" type="button">Logout</button>
+    <div class="form-inline">
+      <button type="button" onclick="location.href='CafeProfile.html'">
+        Cafe Profile
+      </button>
+
+      <button type="button" onclick="location.href='Menu.html'">
+        Menu Management
+      </button>
+
+      <button type="button" onclick="location.href='PublicPreview.html'">
+        Public Website Preview
+      </button>
+
+      <button type="button" onclick="location.href='Admin.html'">
+        Admin Panel
+      </button>
+    </div>
+
+    <button id="logoutBtn" class="ghost" type="button">
+      Logout
+    </button>
   </div>
 
-  <script src="../script/app.js"></script>
+  <script src="../script/auth.js"></script>
 </body>
 </html>
