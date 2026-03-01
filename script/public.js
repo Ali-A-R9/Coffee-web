@@ -11,16 +11,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const cafeHours = document.getElementById("cafeHours");
   const publicMenu = document.getElementById("publicMenu");
 
-  // ===== LOAD CAFE PROFILE =====
+  // ==========================
+  // LOAD CAFE PROFILE
+  // ==========================
   const cafeData = JSON.parse(localStorage.getItem("cafe_" + user));
 
   if (cafeData) {
     cafeTitle.textContent = cafeData.name || "My Cafe";
     cafeDescription.textContent = cafeData.description || "";
-    cafeHours.textContent = cafeData.hours ? "Working Hours: " + cafeData.hours : "";
+    cafeHours.textContent = cafeData.hours
+      ? "Working Hours: " + cafeData.hours
+      : "";
   }
 
-  // ===== LOAD MENU =====
+  // ==========================
+  // LOAD MENU
+  // ==========================
   const menuData = JSON.parse(localStorage.getItem("menu_" + user)) || [];
 
   if (menuData.length === 0) {
@@ -31,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   menuData.forEach(category => {
 
     const section = document.createElement("div");
-    section.style.marginBottom = "25px";
+    section.classList.add("public-category");
 
     const title = document.createElement("h3");
     title.textContent = category.name;
@@ -41,9 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     category.items.forEach(item => {
 
       const itemDiv = document.createElement("div");
-      itemDiv.style.display = "flex";
-      itemDiv.style.justifyContent = "space-between";
-      itemDiv.style.marginBottom = "6px";
+      itemDiv.classList.add("public-item");
 
       itemDiv.innerHTML = `
         <span>${item.name}</span>

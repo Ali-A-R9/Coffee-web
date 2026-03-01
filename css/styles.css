@@ -195,3 +195,140 @@ button.ghost{
   .card{padding:20px}
   h1{font-size:18px}
 }
+
+/* =========================
+   DASHBOARD BUTTON GROUP
+========================= */
+
+.form-inline button {
+  margin-top: 10px;
+}
+
+/* =========================
+   MENU UI IMPROVEMENTS
+========================= */
+
+.menu-category {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
+}
+
+.menu-category h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.category-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 8px;
+}
+
+.menu-item span:first-child {
+  font-weight: 500;
+}
+
+.menu-item button {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* =========================
+   PUBLIC PAGE STYLE
+========================= */
+
+.public-container {
+  width: 700px;
+  max-width: 95vw;
+}
+
+.public-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.public-header h1 {
+  font-size: 26px;
+}
+
+.public-category {
+  margin-bottom: 25px;
+}
+
+.public-category h3 {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 6px;
+}
+
+.public-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+/* ===== FLEX ROW ALIGNMENT ===== */
+
+.row-space {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row-space > span {
+  flex: 1;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.category-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ===== CATEGORY BOX ===== */
+
+.menu-category {
+  background: #111;
+  padding: 18px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ===== ITEM STYLE ===== */
+
+.menu-item {
+  background: #1a1a1a;
+  padding: 12px 0 12px 14px; 
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.menu-item span {
+  font-weight: 500;
+}
+
+/* Buttons smaller inside rows */
+.row-actions button {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 13px;
+}

@@ -16,45 +16,58 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let menuData = JSON.parse(localStorage.getItem("menu_" + user)) || [];
 
-  // ===== SAVE TO STORAGE =====
   function saveMenu() {
     localStorage.setItem("menu_" + user, JSON.stringify(menuData));
   }
 
-  // ===== RENDER MENU =====
   function renderMenu() {
     menuDisplay.innerHTML = "";
     itemCategorySelect.innerHTML = "";
 
-    menuData.forEach((category, index) => {
+    if (menuData.length === 0) {
+      menuDisplay.innerHTML = "<p class='small'>No categories yet.</p>";
+    }
 
-      // Add category to select
+    menuData.forEach((category, categoryIndex) => {
+
+      // Add category to dropdown
       const option = document.createElement("option");
-      option.value = index;
+      option.value = categoryIndex;
       option.textContent = category.name;
       itemCategorySelect.appendChild(option);
 
-      // Create category section
       const section = document.createElement("div");
-      section.style.marginBottom = "20px";
+      section.classList.add("menu-category");
 
-      const title = document.createElement("h3");
-      title.textContent = category.name;
+      // ===== CATEGORY HEADER ROW =====
+      const headerRow = document.createElement("div");
+      headerRow.classList.add("row-space");
 
-      section.appendChild(title);
+      headerRow.innerHTML = `
+        <span class="category-title">${category.name}</span>
+        <div class="row-actions">
+          <button class="ghost" onclick="editCategory(${categoryIndex})">Edit</button>
+          <button class="ghost" onclick="deleteCategory(${categoryIndex})">Delete</button>
+        </div>
+      `;
 
+      section.appendChild(headerRow);
+
+      // ===== ITEMS =====
       category.items.forEach((item, itemIndex) => {
-        const itemDiv = document.createElement("div");
-        itemDiv.style.display = "flex";
-        itemDiv.style.justifyContent = "space-between";
-        itemDiv.style.marginBottom = "6px";
 
-        itemDiv.innerHTML = `
+        const itemRow = document.createElement("div");
+        itemRow.classList.add("row-space", "menu-item");
+
+        itemRow.innerHTML = `
           <span>${item.name} - ${item.price} SAR</span>
-          <button class="ghost" onclick="deleteItem(${index}, ${itemIndex})">Delete</button>
+          <div class="row-actions">
+            <button class="ghost" onclick="editItem(${categoryIndex}, ${itemIndex})">Edit</button>
+            <button class="ghost" onclick="deleteItem(${categoryIndex}, ${itemIndex})">Delete</button>
+          </div>
         `;
 
-        section.appendChild(itemDiv);
+        section.appendChild(itemRow);
       });
 
       menuDisplay.appendChild(section);
@@ -64,15 +77,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== ADD CATEGORY =====
   categoryForm.addEventListener("submit", (e) => {
     e.preventDefault();
-
     const name = categoryInput.value.trim();
     if (!name) return;
 
-    menuData.push({
-      name: name,
-      items: []
-    });
-
+    menuData.push({ name, items: [] });
     categoryInput.value = "";
     saveMenu();
     renderMenu();
@@ -88,10 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!name || !price) return;
 
-    menuData[categoryIndex].items.push({
-      name,
-      price
-    });
+    menuData[categoryIndex].items.push({ name, price });
 
     itemNameInput.value = "";
     itemPriceInput.value = "";
@@ -100,9 +105,44 @@ document.addEventListener("DOMContentLoaded", () => {
     renderMenu();
   });
 
-  // ===== DELETE ITEM (GLOBAL FUNCTION) =====
+  // ===== DELETE CATEGORY =====
+  window.deleteCategory = function(index) {
+    if (!confirm("Delete this category?")) return;
+    menuData.splice(index, 1);
+    saveMenu();
+    renderMenu();
+  };
+
+  // ===== EDIT CATEGORY =====
+  window.editCategory = function(index) {
+    const newName = prompt("New category name:", menuData[index].name);
+    if (!newName) return;
+
+    menuData[index].name = newName.trim();
+    saveMenu();
+    renderMenu();
+  };
+
+  // ===== DELETE ITEM =====
   window.deleteItem = function(categoryIndex, itemIndex) {
     menuData[categoryIndex].items.splice(itemIndex, 1);
+    saveMenu();
+    renderMenu();
+  };
+
+  // ===== EDIT ITEM =====
+  window.editItem = function(categoryIndex, itemIndex) {
+    const item = menuData[categoryIndex].items[itemIndex];
+
+    const newName = prompt("Edit item name:", item.name);
+    if (!newName) return;
+
+    const newPrice = prompt("Edit item price:", item.price);
+    if (!newPrice) return;
+
+    item.name = newName.trim();
+    item.price = newPrice.trim();
+
     saveMenu();
     renderMenu();
   };
