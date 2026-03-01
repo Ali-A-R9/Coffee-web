@@ -11,9 +11,34 @@
   <div class="card">
     <h1>Menu Management</h1>
 
-    <p class="small">
-      Coming next: Create categories, add items, edit & delete menu items.
-    </p>
+    <!-- Add Category -->
+    <form id="categoryForm" class="form-inline">
+      <label>New Category</label>
+      <input id="categoryName" type="text" placeholder="e.g. Hot Drinks">
+      <button type="submit">Add Category</button>
+      <p id="categoryMsg" aria-live="polite"></p>
+    </form>
+
+    <hr style="margin:20px 0;">
+
+    <!-- Add Item -->
+    <form id="itemForm" class="form-inline">
+      <label>Item Name</label>
+      <input id="itemName" type="text" placeholder="e.g. Latte">
+
+      <label>Price</label>
+      <input id="itemPrice" type="number" placeholder="e.g. 18">
+
+      <label>Select Category</label>
+      <select id="itemCategory"></select>
+
+      <button type="submit">Add Item</button>
+      <p id="itemMsg" aria-live="polite"></p>
+    </form>
+
+    <hr style="margin:20px 0;">
+
+    <div id="menuDisplay"></div>
 
     <button class="ghost" type="button" onclick="location.href='Dashboard.html'">
       Back to Dashboard
@@ -25,5 +50,6 @@
   </div>
 
   <script src="../script/auth.js"></script>
+  <script src="../script/menu.js"></script>
 </body>
 </html>
