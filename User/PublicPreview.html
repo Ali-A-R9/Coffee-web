@@ -8,12 +8,16 @@
 </head>
 
 <body class="container">
-  <div class="card">
-    <h1>Public Website Preview</h1>
+  <div class="card" style="width:600px; max-width:95vw;">
+    <h1 id="cafeTitle">Cafe Name</h1>
+    <p id="cafeDescription" class="small"></p>
+    <p id="cafeHours" class="small"></p>
 
-    <p class="small">
-      This will display how customers see the cafe website.
-    </p>
+    <hr style="margin:20px 0;">
+
+    <div id="publicMenu"></div>
+
+    <hr style="margin:20px 0;">
 
     <button class="ghost" type="button" onclick="location.href='Dashboard.html'">
       Back to Dashboard
@@ -25,5 +29,6 @@
   </div>
 
   <script src="../script/auth.js"></script>
+  <script src="../script/public.js"></script>
 </body>
 </html>
