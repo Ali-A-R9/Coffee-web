@@ -1,1 +1,92 @@
-This is just a readme file
+# ☕ CafeSite – Front-End (Milestone 4)
+
+👥 Team Members & Roles
+Name	Role
+Redha Alturaik	Authentication & Database Design
+Ali Al Ramadan	Menu Management
+Hussain Albaqqal	Cafe Setup & Branding
+Hassan Alsayoud	Public Website & Admin Panel
+
+
+## 📌 Project Overview
+
+CafeSite is a SaaS platform that allows cafe owners to create and manage their own professional cafe websites without requiring technical knowledge.
+
+This repository contains the **React + TypeScript front-end prototype** developed for Milestone 4 of the Web Engineering course.
+
+The application demonstrates:
+
+- User authentication (Login / Register)
+- Protected routes
+- Cafe profile management
+- Menu management (CRUD for categories & items)
+- Dynamic public website preview
+- Admin panel structure
+- Fully interactive and responsive UI
+
+---
+
+## 🛠️ Technologies Used
+
+- **React (Vite)**
+- **TypeScript**
+- **React Router DOM**
+- **LocalStorage (temporary data layer)**
+- CSS (custom styling)
+- ESLint (React Hooks rules enabled)
+
+---
+
+## 🏗️ Project Structure
+
+```
+frontend/
+│
+├── src/
+│ ├── api/ # API abstraction layer (localStorage-based)
+│ │ ├── authApi.ts
+│ │ ├── cafeApi.ts
+│ │ └── menuApi.ts
+│ │
+│ ├── components/
+│ │ └── ProtectedRoute.tsx
+│ │
+│ ├── pages/
+│ │ ├── Login.tsx
+│ │ ├── Register.tsx
+│ │ ├── Dashboard.tsx
+│ │ ├── CafeProfile.tsx
+│ │ ├── Menu.tsx
+│ │ ├── PublicPreview.tsx
+│ │ └── Admin.tsx
+│ │
+│ ├── types/
+│ │ └── menu.ts
+│ │
+│ ├── styles/
+│ │ └── global.css
+│ │
+│ ├── App.tsx
+│ └── main.tsx
+│
+├── index.html
+├── package.json
+├── vite.config.ts
+└── tsconfig files
+```
+
+
+---
+
+## 🚀 Installation & Setup
+
+### 1️⃣ Clone the repository
+
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd Coffee-web/frontend
+npm install
+npm run dev
+Then Open your browser at: localhost link
+```
+
