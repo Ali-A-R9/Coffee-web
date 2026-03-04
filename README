@@ -1,12 +1,15 @@
 # ☕ CafeSite – Front-End (Milestone 4)
 
-👥 Team Members & Roles
-Name	Role
-Redha Alturaik	Authentication & Database Design
-Ali Al Ramadan	Menu Management
-Hussain Albaqqal	Cafe Setup & Branding
-Hassan Alsayoud	Public Website & Admin Panel
+## 👥 Team Members & Roles
 
+| Name              | Role                              |
+|-------------------|-----------------------------------|
+| Redha Alturaik    | Authentication & Database Design  |
+| Ali Al Ramadan    | Menu Management                   |
+| Hussain Albaqqal  | Cafe Setup & Branding             |
+| Hassan Alsayoud   | Public Website & Admin Panel      |
+
+---
 
 ## 📌 Project Overview
 
@@ -32,49 +35,48 @@ The application demonstrates:
 - **TypeScript**
 - **React Router DOM**
 - **LocalStorage (temporary data layer)**
-- CSS (custom styling)
-- ESLint (React Hooks rules enabled)
+- **CSS (custom styling)**
+- **ESLint (React Hooks rules enabled)**
 
 ---
 
 ## 🏗️ Project Structure
 
-```
+```bash
 frontend/
 │
 ├── src/
-│ ├── api/ # API abstraction layer (localStorage-based)
-│ │ ├── authApi.ts
-│ │ ├── cafeApi.ts
-│ │ └── menuApi.ts
-│ │
-│ ├── components/
-│ │ └── ProtectedRoute.tsx
-│ │
-│ ├── pages/
-│ │ ├── Login.tsx
-│ │ ├── Register.tsx
-│ │ ├── Dashboard.tsx
-│ │ ├── CafeProfile.tsx
-│ │ ├── Menu.tsx
-│ │ ├── PublicPreview.tsx
-│ │ └── Admin.tsx
-│ │
-│ ├── types/
-│ │ └── menu.ts
-│ │
-│ ├── styles/
-│ │ └── global.css
-│ │
-│ ├── App.tsx
-│ └── main.tsx
+│   ├── api/                     # API abstraction layer (localStorage-based)
+│   │   ├── authApi.ts
+│   │   ├── cafeApi.ts
+│   │   └── menuApi.ts
+│   │
+│   ├── components/
+│   │   └── ProtectedRoute.tsx
+│   │
+│   ├── pages/
+│   │   ├── Login.tsx
+│   │   ├── Register.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── CafeProfile.tsx
+│   │   ├── Menu.tsx
+│   │   ├── PublicPreview.tsx
+│   │   └── Admin.tsx
+│   │
+│   ├── types/
+│   │   └── menu.ts
+│   │
+│   ├── styles/
+│   │   └── global.css
+│   │
+│   ├── App.tsx
+│   └── main.tsx
 │
 ├── index.html
 ├── package.json
 ├── vite.config.ts
-└── tsconfig files
+└── tsconfig.json
 ```
-
 
 ---
 
@@ -85,8 +87,34 @@ frontend/
 ```bash
 git clone <YOUR_REPOSITORY_URL>
 cd Coffee-web/frontend
-npm install
-npm run dev
-Then Open your browser at: localhost link
 ```
 
+### 2️⃣ Install dependencies
+
+```bash
+npm install
+```
+
+### 3️⃣ Run the development server
+
+```bash
+npm run dev
+```
+
+Then open your browser at:
+
+```
+http://localhost:5173
+```
+
+---
+
+## 📄 Notes
+
+- This version uses **LocalStorage** as a temporary data layer (no backend integration yet).
+- All authentication and menu data are stored in the browser.
+- This project is developed for academic purposes (Web Engineering – Milestone 4).
+
+---
+
+© 2026 CafeSite Team
