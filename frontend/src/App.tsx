@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import CafeProfile from "./pages/CafeProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -26,7 +27,14 @@ function App() {
             </ProtectedRoute>
           }
         />
-
+        <Route 
+        path="/Profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+        />
         <Route
           path="/cafe-profile"
           element={
