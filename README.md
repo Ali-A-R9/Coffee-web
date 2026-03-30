@@ -9,7 +9,7 @@
 | Hussain Albaqqal  | Cafe Setup & Branding             |
 | Hassan Alsayoud   | Public Website & Admin Panel      |
 
----
+---..
 
 ## 📌 Project Overview
 
