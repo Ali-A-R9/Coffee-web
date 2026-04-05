@@ -4,6 +4,14 @@ export type CafeData = {
   name: string;
   description: string;
   hours: string;
+  ownerName?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  logo?: string | null;
+  workingHours?: Record<string, { open: string; close: string }>;
 };
 
 export function getCafe(user: string): CafeData | null {

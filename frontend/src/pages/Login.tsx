@@ -33,10 +33,37 @@ function Login() {
   function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault();
 
+    const expected = quickFill.find((item) => item.role === selectedRole);
+    if (!expected) {
+      setMessage("Selected role is invalid.");
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (
+      normalizedEmail !== expected.email.toLowerCase() ||
+      password !== expected.password
+    ) {
+      setMessage("Invalid credentials for the selected role.");
+      return;
+    }
+
     const error = login(email.trim(), password);
 
     if (error) {
       setMessage(error);
+      return;
+    }
+
+    localStorage.setItem("auth_role", selectedRole);
+
+    if (selectedRole === "admin") {
+      navigate("/admin");
+      return;
+    }
+
+    if (selectedRole === "client") {
+      navigate("/preview");
       return;
     }
 

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
-import Dashboard from "./pages/Dashboard";
+import OwnerDashboard from "./pages/OwnerDashboard";
 import CafeProfile from "./pages/CafeProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Menu from "./pages/Menu";
@@ -23,7 +23,7 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <OwnerDashboard />
             </ProtectedRoute>
           }
         />
