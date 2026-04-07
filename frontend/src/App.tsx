@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Menu from "./pages/Menu";
 import PublicPreview from "./pages/PublicPreview";
 import Admin from "./pages/Admin";
+import ClientView from "./pages/ClientView";
 
 function App() {
   return (
@@ -58,6 +59,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PublicPreview />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/client"
+          element={
+            <ProtectedRoute>
+              <ClientView />
             </ProtectedRoute>
           }
         />
