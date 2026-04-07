@@ -63,7 +63,7 @@ function Login() {
     }
 
     if (selectedRole === "client") {
-      navigate("/preview");
+      navigate("/client");
       return;
     }
 
