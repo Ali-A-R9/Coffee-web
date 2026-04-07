@@ -17,7 +17,10 @@ import {
   Star,
   Trash2,
   UserRound,
+  LogOut,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../api/authApi";
 
 type TabId = "home" | "search" | "cart" | "account";
 type ViewMode = "list" | "details" | "menu";
@@ -180,6 +183,7 @@ function money(value: number): string {
 }
 
 function ClientView() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedCafeId, setSelectedCafeId] = useState<string>(cafes[0].id);
@@ -381,6 +385,11 @@ function ClientView() {
   function resetSearch() {
     setSearchTerm("");
     setActiveFilters([]);
+  }
+
+  function handleLogout() {
+    logout();
+    navigate("/");
   }
 
   return (
@@ -770,6 +779,9 @@ function ClientView() {
               <button type="button">Saved Addresses</button>
               <button type="button">Payment Methods</button>
               <button type="button">Order History</button>
+              <button type="button" className="cx-logout-btn" onClick={handleLogout}>
+                <LogOut size={14} /> Log out
+              </button>
             </section>
 
             <section className="cx-account-card">

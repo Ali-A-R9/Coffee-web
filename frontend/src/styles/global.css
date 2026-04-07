@@ -3479,6 +3479,19 @@ button.ghost{
   margin-bottom: 0;
 }
 
+.cx-account-card .cx-logout-btn{
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fff5f5;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cx-account-card .cx-logout-btn:hover{
+  background: #fee2e2;
+}
+
 .cx-track{
   display: grid;
   grid-template-columns: repeat(4, 1fr);
