@@ -2196,6 +2196,215 @@ button.ghost{
   color: #6b7280;
 }
 
+/* =========================
+   OWNER VISUAL POLISH
+========================= */
+
+.owner-layout{
+  background:
+    radial-gradient(1000px 340px at 10% -20%, rgba(14,165,233,0.08), transparent 64%),
+    radial-gradient(900px 300px at 100% -30%, rgba(15,23,42,0.10), transparent 68%),
+    #f4f7fb;
+}
+
+.owner-sidebar{
+  background: #0f172a;
+  border-right: 1px solid #1e293b;
+}
+
+.owner-brand{
+  margin: 8px 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  color: #e2e8f0;
+}
+
+.owner-brand strong{
+  font-size: 24px;
+  line-height: 1;
+}
+
+.owner-brand-icon{
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f97316, #ea580c);
+  color: #fff;
+}
+
+.owner-sidebar-title{
+  color: #94a3b8;
+}
+
+.owner-nav-item{
+  color: #cbd5e1;
+}
+
+.owner-nav-item:hover{
+  background: #1e293b;
+}
+
+.owner-nav-item.active{
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-color: rgba(249,115,22,0.45);
+}
+
+.owner-sidebar-footer{
+  border-top-color: #1e293b;
+}
+
+.owner-user-pill strong{
+  color: #f8fafc;
+}
+
+.owner-user-pill span{
+  color: #94a3b8;
+}
+
+.owner-logout{
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #374151;
+}
+
+.owner-logout:hover{
+  background: #1f2937;
+}
+
+.owner-main{
+  padding: 24px;
+}
+
+.owner-title{
+  color: #0f172a;
+}
+
+.owner-status-row{
+  margin: 0 0 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.owner-pill{
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.owner-pill-pending{
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+}
+
+.owner-pill-live{
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+}
+
+.owner-alert{
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(217,119,6,0.08);
+}
+
+.owner-stat-card,
+.owner-panel{
+  border-radius: 12px;
+  border-color: #d9e1ea;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.05);
+}
+
+.owner-stat-card{
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.owner-stat-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(15,23,42,0.10);
+}
+
+.owner-action{
+  border-color: #cfd8e3;
+  border-radius: 10px;
+}
+
+.owner-action:hover{
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.owner-primary,
+.owner-secondary,
+.owner-danger{
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.owner-primary{
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  border: 1px solid #0f172a;
+  color: #fff;
+}
+
+.owner-primary:hover{
+  background: linear-gradient(135deg, #1e293b, #334155);
+  transform: translateY(-1px);
+}
+
+.owner-secondary{
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.owner-secondary:hover{
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.owner-danger{
+  background: #fff5f5;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.owner-danger:hover{
+  background: #fee2e2;
+}
+
+.owner-inline-add .owner-primary,
+.owner-item-actions .owner-secondary,
+.owner-item-actions .owner-danger,
+.owner-theme-actions .owner-primary,
+.owner-theme-actions .owner-secondary,
+.owner-qr-grid .owner-primary,
+.owner-qr-grid .owner-secondary{
+  margin-top: 0;
+}
+
+.owner-panel h2{
+  color: #0f172a;
+}
+
+.owner-categories li button.active{
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.owner-theme-card.selected{
+  border-color: #fb923c;
+  box-shadow: 0 10px 24px rgba(249,115,22,0.16);
+}
+
 @media (max-width: 1200px){
   .owner-layout{
     grid-template-columns: 200px 1fr;
@@ -3587,4 +3796,221 @@ button.ghost{
   .cx-track{
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* =========================
+   CLIENT VISUAL UPGRADE
+========================= */
+
+.cx-app{
+  background:
+    radial-gradient(900px 300px at -10% -10%, rgba(249,115,22,0.16), transparent 60%),
+    radial-gradient(900px 360px at 110% -20%, rgba(56,189,248,0.12), transparent 64%),
+    linear-gradient(180deg, #f9f5ef 0%, #f4f7fb 100%);
+}
+
+.cx-topbar{
+  background: rgba(249,250,252,0.78);
+  border-bottom: 1px solid rgba(148,163,184,0.24);
+}
+
+.cx-topbar h1{
+  letter-spacing: 0.2px;
+}
+
+.cx-notify{
+  background: linear-gradient(160deg, #ffffff, #f8fafc);
+  border-color: #cbd5e1;
+}
+
+.cx-notify:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15,23,42,0.10);
+}
+
+.cx-hero{
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #111827 0%, #1e293b 48%, #0f766e 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 42px rgba(15,23,42,0.22);
+}
+
+.cx-hero::after{
+  content: "";
+  position: absolute;
+  right: -36px;
+  top: -36px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.25), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
+.cx-hero button,
+.cx-cafe-actions .primary,
+.cx-cta,
+.cx-item-actions button,
+.cx-promo button{
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+  border: 1px solid #d24f09;
+  box-shadow: 0 8px 20px rgba(234,88,12,0.25);
+}
+
+.cx-hero button:hover,
+.cx-cafe-actions .primary:hover,
+.cx-cta:hover,
+.cx-item-actions button:hover,
+.cx-promo button:hover{
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 14px 26px rgba(249,115,22,0.30);
+}
+
+.cx-cafe-card,
+.cx-panel,
+.cx-menu-block,
+.cx-order-status{
+  background: linear-gradient(180deg, #ffffff, #fcfdff);
+  border: 1px solid #dbe3ef;
+  box-shadow: 0 10px 24px rgba(15,23,42,0.06);
+}
+
+.cx-cafe-card{
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.cx-cafe-card:hover{
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: 0 16px 34px rgba(15,23,42,0.11);
+}
+
+.cx-cafe-icon{
+  background: linear-gradient(145deg, #ffedd5, #fff7ed);
+  color: #9a3412;
+  border: 1px solid #fed7aa;
+}
+
+.cx-heart{
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.cx-heart:hover{
+  transform: scale(1.06);
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.08);
+}
+
+.cx-tag-row span{
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #075985;
+}
+
+.cx-cafe-actions .ghost,
+.cx-back,
+.cx-clear-btn,
+.cx-result-row button,
+.cx-account-card button,
+.cx-order-status button{
+  background: #fff;
+  border: 1px solid #d5dde8;
+  color: #1f2937;
+}
+
+.cx-cafe-actions .ghost:hover,
+.cx-back:hover,
+.cx-clear-btn:hover,
+.cx-result-row button:hover,
+.cx-account-card button:hover,
+.cx-order-status button:hover{
+  background: #f8fafc;
+  border-color: #93c5fd;
+}
+
+.cx-categories button,
+.cx-chip-row button,
+.cx-fulfillment button{
+  border-color: #d3dbe6;
+  background: #fff;
+}
+
+.cx-categories button:hover,
+.cx-chip-row button:hover,
+.cx-fulfillment button:hover{
+  border-color: #f59e0b;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.cx-categories button.active,
+.cx-chip-row button.active,
+.cx-fulfillment button.active{
+  background: linear-gradient(135deg, #0f172a, #334155);
+  border-color: #0f172a;
+  color: #fff;
+}
+
+.cx-searchbar,
+.cx-cart-group,
+.cx-promo,
+.cx-details-grid article{
+  border-color: #d9e2ee;
+}
+
+.cx-searchbar:focus-within{
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
+}
+
+.cx-menu-item{
+  border-top-color: #eef2f7;
+  transition: background .16s ease;
+}
+
+.cx-menu-item:hover{
+  background: #fffaf4;
+}
+
+.cx-summary .total{
+  border-top-color: #fdba74;
+}
+
+.cx-nav{
+  background: rgba(255,255,255,0.86);
+  border-top-color: #d7e0ec;
+}
+
+.cx-nav button.active{
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border-color: #fdba74;
+  color: #9a3412;
+}
+
+.cx-nav button:hover{
+  background: #f8fafc;
+}
+
+.cx-account .avatar{
+  background: linear-gradient(145deg, #0f172a, #334155);
+}
+
+.cx-account-card .cx-logout-btn{
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.cx-account-card .cx-logout-btn:hover{
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.cx-app button:focus-visible,
+.cx-app input:focus-visible{
+  outline: 2px solid rgba(249,115,22,0.40);
+  outline-offset: 2px;
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Coffee,
   Eye,
   Home,
   List,
@@ -184,7 +185,12 @@ function OwnerDashboard() {
     <div className="owner-layout">
       <aside className="owner-sidebar">
         <div>
-          <div className="owner-brand">CafeSite</div>
+          <div className="owner-brand">
+            <span className="owner-brand-icon">
+              <Coffee size={14} />
+            </span>
+            <strong>CafeSite</strong>
+          </div>
           <p className="owner-sidebar-title">CAFE MANAGEMENT</p>
 
           <div className="owner-nav">
@@ -219,6 +225,10 @@ function OwnerDashboard() {
           <section>
             <h1 className="owner-title">Welcome Back, {ownerName}! ☕</h1>
             <p className="owner-subtitle">Manage your cafe and track your performance</p>
+            <div className="owner-status-row">
+              <span className="owner-pill owner-pill-pending">Pending Admin Approval</span>
+              <span className="owner-pill owner-pill-live">Profile Synced</span>
+            </div>
 
             <div className="owner-alert">
               <strong>Account Pending Approval</strong>
@@ -382,7 +392,7 @@ function OwnerDashboard() {
             </div>
 
             <button type="button" className="owner-primary" onClick={saveProfile}>
-              Edit Profile
+              Save Profile
             </button>
             <p className={profileMessage ? "success" : "small"}>{profileMessage || " "}</p>
           </section>
