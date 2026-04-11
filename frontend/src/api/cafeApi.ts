@@ -20,7 +20,11 @@ export function getCafe(user: string): CafeData | null {
 }
 
 export function saveCafe(user: string, data: CafeData) {
-  localStorage.setItem("cafe_" + user, JSON.stringify(data));
+  // Temporarily save the existing data
+  const existing = getCafe(user) || ({} as CafeData);
+
+  // Merge the old data with the new data being saved
+  localStorage.setItem("cafe_" + user, JSON.stringify({ ...existing, ...data }));
 }
 
 // Helper function that obtains all cafes and their data, for admin users.
