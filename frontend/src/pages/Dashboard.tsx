@@ -39,6 +39,7 @@ function Dashboard() {
   const [name, setName] = useState<string>(initialCafe?.name || "");
   const [description, setDescription] = useState<string>(initialCafe?.description || "");
   const [hours, setHours] = useState<string>(initialCafe?.hours || "");
+  const [status, setStatus] = useState<string>(initialCafe?.status || "Pending");
   const [profileMessage, setProfileMessage] = useState<string>("");
   const [profileMessageType, setProfileMessageType] = useState<string>("");
 
@@ -409,7 +410,11 @@ function Dashboard() {
         <header className="dashboard-topbar">
           <div className="dashboard-heading">
             <h1>Dashboard</h1>
+	    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <p>Welcome back, {user}</p>
+	    <span className={`admin-status ${status.toLowerCase()}`}>
+                {status}
+            </span>
           </div>
 
           <div className="topbar-actions">

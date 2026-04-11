@@ -9,6 +9,7 @@ export type CafeData = {
   address?: string;
   city?: string;
   state?: string;
+  status?: string;
   zipCode?: string;
   logo?: string | null;
   workingHours?: Record<string, { open: string; close: string }>;
@@ -37,12 +38,12 @@ export function getAllCafes() {
       const cafeData = JSON.parse(localStorage.getItem(key) || "{}");
       
       allCafes.push({
+	...cafeData,
         id: key,
         name: cafeData.name || "Unnamed Cafe",
         ownerEmail: key.replace("cafe_", ""),
         status: cafeData.status || "Pending", 
         createdDate: cafeData.createdDate || new Date().toLocaleDateString(),
-        ...cafeData 
       });
     }
   }
@@ -61,7 +62,7 @@ export function seedDatabase() {
 
   // Original mock data
   const initialCafes = [
-    { id: "brew-bean", name: "Brew & Bean", ownerName: "John Smith", ownerEmail: "owner@brewbean.com", phone: "+1 (555) 123-4567", createdDate: "Jan 15, 2025", status: "Pending", address: "123 Main Street", city: "Seattle", state: "WA", zipCode: "98101", description: "A cozy neighborhood cafe.", websiteUrl: "https://brewbean.cafesite.com", plan: "Free Trial" },
+    { id: "brew-bean", name: "Brew & Bean", ownerName: "John Smith", ownerEmail: "owner@owner.com", phone: "+1 (555) 123-4567", createdDate: "Jan 15, 2025", status: "Pending", address: "123 Main Street", city: "Seattle", state: "WA", zipCode: "98101", description: "A cozy neighborhood cafe.", websiteUrl: "https://brewbean.cafesite.com", plan: "Free Trial" },
     { id: "daily-grind", name: "The Daily Grind", ownerName: "Jane Doe", ownerEmail: "contact@dailygrind.com", phone: "+1 (555) 890-1122", createdDate: "Jan 10, 2025", status: "Active", address: "212 Pine St", city: "Seattle", state: "WA", zipCode: "98122", description: "Fast and friendly morning coffee.", websiteUrl: "https://dailygrind.cafesite.com", plan: "Pro" },
     { id: "espresso-express", name: "Espresso Express", ownerName: "Mike Johnson", ownerEmail: "hello@espressoexpress.com", phone: "+1 (555) 334-7788", createdDate: "Jan 8, 2025", status: "Active", address: "98 Lake Ave", city: "Seattle", state: "WA", zipCode: "98109", description: "Quick-service espresso bar.", websiteUrl: "https://espressoexpress.cafesite.com", plan: "Pro" }
   ];

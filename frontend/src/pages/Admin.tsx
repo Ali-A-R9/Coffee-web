@@ -322,7 +322,7 @@ function Admin() {
                       </div>
                     </div>
                     <div className="right">
-                      <p>{index % 2 === 0 ? "Pending Approval" : "Account Activated"}</p>
+		      <p>{cafe.status === "Pending" ? "Pending Approval" : "Account Activated"}</p>
                       {renderStatusBadge(cafe.status)}
                     </div>
                   </article>
