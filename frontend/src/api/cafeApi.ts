@@ -50,3 +50,20 @@ export function saveCafeAdmin(id: string, updatedData: any) {
   const existing = JSON.parse(localStorage.getItem(id) || "{}");
   localStorage.setItem(id, JSON.stringify({ ...existing, ...updatedData }));
 }
+
+export function seedDatabase() {
+  // Make sure that the database is actually empty first.
+  if (getAllCafes().length > 0) return;
+
+  // Original mock data
+  const initialCafes = [
+    { id: "brew-bean", name: "Brew & Bean", ownerName: "John Smith", ownerEmail: "owner@brewbean.com", phone: "+1 (555) 123-4567", createdDate: "Jan 15, 2025", status: "Pending", address: "123 Main Street", city: "Seattle", state: "WA", zipCode: "98101", description: "A cozy neighborhood cafe.", websiteUrl: "https://brewbean.cafesite.com", plan: "Free Trial" },
+    { id: "daily-grind", name: "The Daily Grind", ownerName: "Jane Doe", ownerEmail: "contact@dailygrind.com", phone: "+1 (555) 890-1122", createdDate: "Jan 10, 2025", status: "Active", address: "212 Pine St", city: "Seattle", state: "WA", zipCode: "98122", description: "Fast and friendly morning coffee.", websiteUrl: "https://dailygrind.cafesite.com", plan: "Pro" },
+    { id: "espresso-express", name: "Espresso Express", ownerName: "Mike Johnson", ownerEmail: "hello@espressoexpress.com", phone: "+1 (555) 334-7788", createdDate: "Jan 8, 2025", status: "Active", address: "98 Lake Ave", city: "Seattle", state: "WA", zipCode: "98109", description: "Quick-service espresso bar.", websiteUrl: "https://espressoexpress.cafesite.com", plan: "Pro" }
+  ];
+
+  // Save to localstore
+  initialCafes.forEach((cafe) => {
+    localStorage.setItem("cafe_" + cafe.ownerEmail, JSON.stringify(cafe));
+  });
+}

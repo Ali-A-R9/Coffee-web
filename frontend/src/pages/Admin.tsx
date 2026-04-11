@@ -20,7 +20,7 @@ import {
   Clock3,
 } from "lucide-react";
 import { logout } from "../api/authApi";
-import { getAllCafes, saveCafeAdmin } from "../api/cafeApi";
+import { getAllCafes, saveCafeAdmin, seedDatabase } from "../api/cafeApi";
 
 
 type AdminSection = "dashboard" | "cafes" | "pending" | "health" | "settings";
@@ -148,6 +148,7 @@ function Admin() {
 
   // Fetch data from localstorage
   useEffect(() => {
+    seedDatabase();
     setCafes(getAllCafes());
   }, []);
 
