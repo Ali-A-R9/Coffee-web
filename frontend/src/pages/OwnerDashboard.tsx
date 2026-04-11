@@ -53,6 +53,8 @@ function OwnerDashboard() {
   const cafe = useMemo(() => (user ? getCafe(user) : null), [user]);
   const initialMenu = useMemo(() => (user ? getMenu(user) : []), [user]);
 
+  const [status, setStatus] = useState<string>(cafe?.status || "Pending");
+
   const [activeSection, setActiveSection] = useState<OwnerSection>("dashboard");
   const [menuData, setMenuData] = useState<Category[]>(initialMenu);
 
@@ -225,15 +227,20 @@ function OwnerDashboard() {
           <section>
             <h1 className="owner-title">Welcome Back, {ownerName}! ☕</h1>
             <p className="owner-subtitle">Manage your cafe and track your performance</p>
+
             <div className="owner-status-row">
-              <span className="owner-pill owner-pill-pending">Pending Admin Approval</span>
+              <span className={`owner-pill ${status === "Active" ? "owner-pill-live" : "owner-pill-pending"}`}>
+                {status === "Active" ? "Account Activated" : "Pending Admin Approval"}
+              </span>
               <span className="owner-pill owner-pill-live">Profile Synced</span>
             </div>
-
+            
+	    {status === "Pending" &&  (
             <div className="owner-alert">
               <strong>Account Pending Approval</strong>
               <p>Your cafe is currently under review by our admin team. You'll receive an email once approved.</p>
             </div>
+            )}
 
             <div className="owner-stats">
               <div className="owner-stat-card">
