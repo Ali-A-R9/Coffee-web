@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -20,6 +20,8 @@ import {
   Clock3,
 } from "lucide-react";
 import { logout } from "../api/authApi";
+import { getAllCafes, saveCafeAdmin } from "../api/cafeApi";
+
 
 type AdminSection = "dashboard" | "cafes" | "pending" | "health" | "settings";
 type CafeStatus = "Active" | "Pending";
@@ -129,7 +131,7 @@ function Admin() {
   const navigate = useNavigate();
 
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
-  const [cafes, setCafes] = useState<CafeRecord[]>(initialCafes);
+  const [cafes, setCafes] = useState<CafeRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCafeId, setSelectedCafeId] = useState<string | null>(null);
   const [detailMessage, setDetailMessage] = useState("");
@@ -143,6 +145,12 @@ function Admin() {
   const [minimumPasswordLength, setMinimumPasswordLength] = useState("8");
   const [requireSpecialCharacters, setRequireSpecialCharacters] = useState(true);
   const [requireNumbers, setRequireNumbers] = useState(true);
+
+  // Fetch data from localstorage
+  useEffect(() => {
+    setCafes(getAllCafes());
+  }, []);
+
 
   const filteredCafes = useMemo(() => {
     const key = searchTerm.trim().toLowerCase();
@@ -174,10 +182,12 @@ function Admin() {
 
   function updateCafe(cafeId: string, updates: Partial<CafeRecord>) {
     setCafes((prev) => prev.map((cafe) => (cafe.id === cafeId ? { ...cafe, ...updates } : cafe)));
+    saveCafeAdmin(cafeId, updates);
   }
 
   function removeCafe(cafeId: string) {
     setCafes((prev) => prev.filter((cafe) => cafe.id !== cafeId));
+    localStorage.removeItem(cafeId);
     if (selectedCafeId === cafeId) {
       setSelectedCafeId(null);
     }
