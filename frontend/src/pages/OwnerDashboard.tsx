@@ -208,35 +208,96 @@ function OwnerDashboard() {
 
   async function persistMenu(updated: Category[]) {
     try {
-      setMenuData(updated);
       await saveMenu(updated);
+      setMenuData(updated);
       setMenuMessage("Menu saved successfully.");
     } catch (error) {
       setMenuMessage(error instanceof Error ? error.message : "Failed to save menu");
+
+      try {
+        const freshData = await getMenu();
+        setMenuData(Array.isArray(freshData) ? freshData : []);
+      } catch {
+        // ignore refresh failure
+      }
     }
   }
 
   function addCategory() {
-    if (!newCategory.trim()) return;
+    const trimmedCategory = newCategory.trim();
+
+    if (!trimmedCategory) {
+      setMenuMessage("Category name is required.");
+      return;
+    }
+
+    const exists = menuData.some(
+      (category) => category.name.toLowerCase() === trimmedCategory.toLowerCase()
+    );
+
+    if (exists) {
+      setMenuMessage(`Duplicate category name: "${trimmedCategory}".`);
+      return;
+    }
+
+    const updated: Category[] = [
+      ...menuData,
+      { name: trimmedCategory, items: [] },
+    ];
 
     setMenuMessage("");
-    persistMenu([...menuData, { name: newCategory.trim(), items: [] }]);
+    persistMenu(updated);
     setNewCategory("");
   }
 
   function addItem() {
-    if (!newItemName.trim() || !newItemPrice.trim() || menuData.length === 0) {
+    const trimmedName = newItemName.trim();
+    const trimmedPrice = newItemPrice.trim();
+
+    if (!trimmedName) {
+      setMenuMessage("Item name is required.");
       return;
     }
 
-    const updated = [...menuData];
-    const category = updated[newItemCategory];
+    if (!trimmedPrice) {
+      setMenuMessage("Item price is required.");
+      return;
+    }
 
-    if (!category) return;
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmedPrice)) {
+      setMenuMessage("Price must be a valid number like 10 or 10.50.");
+      return;
+    }
 
-    category.items.push({
-      name: newItemName.trim(),
-      price: newItemPrice.trim(),
+    if (menuData.length === 0) {
+      setMenuMessage("Please add a category first.");
+      return;
+    }
+
+    const category = menuData[newItemCategory];
+    if (!category) {
+      setMenuMessage("Please select a valid category.");
+      return;
+    }
+
+    const duplicateItem = category.items.some(
+      (item) => item.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicateItem) {
+      setMenuMessage(
+        `Duplicate item name "${trimmedName}" in category "${category.name}".`
+      );
+      return;
+    }
+
+    const updated: Category[] = menuData.map((cat, index) => {
+      if (index !== newItemCategory) return cat;
+
+      return {
+        ...cat,
+        items: [...cat.items, { name: trimmedName, price: trimmedPrice }],
+      };
     });
 
     setMenuMessage("");
@@ -246,14 +307,22 @@ function OwnerDashboard() {
   }
 
   function removeItem(categoryIndex: number, itemIndex: number) {
-    const updated = [...menuData];
-    updated[categoryIndex].items.splice(itemIndex, 1);
+    const updated: Category[] = menuData.map((category, index) => {
+      if (index !== categoryIndex) return category;
+
+      return {
+        ...category,
+        items: category.items.filter((_, i) => i !== itemIndex),
+      };
+    });
+
     setMenuMessage("");
     persistMenu(updated);
   }
 
   function removeCategory(categoryIndex: number) {
-    const updated = menuData.filter((_, index) => index !== categoryIndex);
+    const updated: Category[] = menuData.filter((_, index) => index !== categoryIndex);
+
     setMenuMessage("");
     persistMenu(updated);
 
@@ -277,13 +346,34 @@ function OwnerDashboard() {
   }
 
   function saveEditedCategory() {
-    if (editingCategoryIndex === null || !editingCategoryName.trim()) return;
+    if (editingCategoryIndex === null) return;
 
-    const updated = [...menuData];
-    updated[editingCategoryIndex] = {
-      ...updated[editingCategoryIndex],
-      name: editingCategoryName.trim(),
-    };
+    const trimmedName = editingCategoryName.trim();
+
+    if (!trimmedName) {
+      setMenuMessage("Category name is required.");
+      return;
+    }
+
+    const exists = menuData.some(
+      (category, index) =>
+        index !== editingCategoryIndex &&
+        category.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (exists) {
+      setMenuMessage(`Duplicate category name: "${trimmedName}".`);
+      return;
+    }
+
+    const updated: Category[] = menuData.map((category, index) => {
+      if (index !== editingCategoryIndex) return category;
+
+      return {
+        ...category,
+        name: trimmedName,
+      };
+    });
 
     setMenuMessage("");
     persistMenu(updated);
@@ -304,14 +394,58 @@ function OwnerDashboard() {
   }
 
   function saveEditedItem() {
-    if (!editingItem || !editingItemName.trim() || !editingItemPrice.trim()) return;
+    if (!editingItem) return;
 
-    const updated = [...menuData];
-    updated[editingItem.categoryIndex].items[editingItem.itemIndex] = {
-      ...updated[editingItem.categoryIndex].items[editingItem.itemIndex],
-      name: editingItemName.trim(),
-      price: editingItemPrice.trim(),
-    };
+    const trimmedName = editingItemName.trim();
+    const trimmedPrice = editingItemPrice.trim();
+
+    if (!trimmedName) {
+      setMenuMessage("Item name is required.");
+      return;
+    }
+
+    if (!trimmedPrice) {
+      setMenuMessage("Item price is required.");
+      return;
+    }
+
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmedPrice)) {
+      setMenuMessage("Price must be a valid number like 10 or 10.50.");
+      return;
+    }
+
+    const category = menuData[editingItem.categoryIndex];
+    if (!category) return;
+
+    const exists = category.items.some(
+      (item, index) =>
+        index !== editingItem.itemIndex &&
+        item.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (exists) {
+      setMenuMessage(
+        `Duplicate item name "${trimmedName}" in category "${category.name}".`
+      );
+      return;
+    }
+
+    const updated: Category[] = menuData.map((cat, catIndex) => {
+      if (catIndex !== editingItem.categoryIndex) return cat;
+
+      return {
+        ...cat,
+        items: cat.items.map((item, itemIndex) => {
+          if (itemIndex !== editingItem.itemIndex) return item;
+
+          return {
+            ...item,
+            name: trimmedName,
+            price: trimmedPrice,
+          };
+        }),
+      };
+    });
 
     setMenuMessage("");
     persistMenu(updated);
@@ -761,7 +895,17 @@ function OwnerDashboard() {
               </div>
             </div>
 
-            <p className={menuMessage ? "success" : "small"}>{menuMessage || " "}</p>
+            <p
+  className={
+    menuMessage === "Menu saved successfully."
+      ? "success"
+      : menuMessage
+      ? "error"
+      : "small"
+  }
+>
+  {menuMessage || " "}
+</p>
           </section>
         )}
 
