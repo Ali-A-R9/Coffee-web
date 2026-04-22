@@ -1,4 +1,7 @@
-const BASE_URL = "http://localhost:5000/api/menu";
+import type { Category } from "../types/menu";
+
+const BASE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL = `${BASE_API_URL}/api/menu`;
 
 export async function getMenu() {
   const token = localStorage.getItem("token");
@@ -9,10 +12,16 @@ export async function getMenu() {
     },
   });
 
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to load menu");
+  }
+
+  return data;
 }
 
-export async function saveMenu(menu: any) {
+export async function saveMenu(menu: Category[]) {
   const token = localStorage.getItem("token");
 
   const res = await fetch(BASE_URL, {
@@ -24,5 +33,11 @@ export async function saveMenu(menu: any) {
     body: JSON.stringify(menu),
   });
 
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to save menu");
+  }
+
+  return data;
 }
