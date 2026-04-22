@@ -31,7 +31,8 @@ export type PublicCafeData = CafeData & {
   }>;
 };
 
-const BASE_URL = "http://localhost:5000/api/cafes";
+const BASE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL = `${BASE_API_URL}/api/cafes`;
 
 function getAuthHeaders(json = false): HeadersInit {
   const token = localStorage.getItem("token");
@@ -93,35 +94,37 @@ export async function updateCafe(data: Partial<CafeData>) {
 
   return result;
 }
-// ADMIN: get all cafes
+
 export async function getAllCafes() {
   const token = localStorage.getItem("token");
 
-  const res = await fetch("http://localhost:5000/api/cafes", {
+  const res = await fetch(BASE_URL, {
     cache: "no-store",
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to load cafes");
+  }
+
+  return data;
 }
 
-// ADMIN: update status
 export async function updateCafeStatus(id: string, status: string) {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(
-    `http://localhost:5000/api/cafes/${id}/status`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status }),
-    }
-  );
+  const res = await fetch(`${BASE_URL}/${id}/status`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
 
   const data = await res.json();
 
