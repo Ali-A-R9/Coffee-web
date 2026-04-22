@@ -3,71 +3,32 @@ import { useNavigate, Link } from "react-router-dom";
 import { login } from "../api/authApi";
 import { Eye, EyeOff } from "lucide-react";
 
-type Role = "admin" | "owner" | "client";
-
 function Login() {
   const navigate = useNavigate();
 
-  const [selectedRole, setSelectedRole] = useState<Role>("admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [message, setMessage] = useState("");
 
-  const quickFill: Array<{ role: Role; label: string; email: string; password: string; icon: string }> = [
-    { role: "admin", label: "Admin", email: "admin@admin.com", password: "admin1234", icon: "🛠️" },
-    { role: "owner", label: "Owner", email: "owner@owner.com", password: "owner1234", icon: "☕" },
-    { role: "client", label: "Client", email: "client@client.com", password: "client1234", icon: "👥" },
-  ];
-
-  function handleQuickFill(role: Role) {
-    const item = quickFill.find((x) => x.role === role);
-    if (!item) return;
-    setSelectedRole(role);
-    setEmail(item.email);
-    setPassword(item.password);
-    setMessage("");
-  }
-
-  function handleSubmit(e: { preventDefault: () => void }) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const expected = quickFill.find((item) => item.role === selectedRole);
-    if (!expected) {
-      setMessage("Selected role is invalid.");
-      return;
+    try {
+      const data = await login(email.trim(), password);
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      if (data.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate(data.role === "owner" ? "/dashboard" : "/");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Login failed");
     }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    if (
-      normalizedEmail !== expected.email.toLowerCase() ||
-      password !== expected.password
-    ) {
-      setMessage("Invalid credentials for the selected role.");
-      return;
-    }
-
-    const error = login(email.trim(), password);
-
-    if (error) {
-      setMessage(error);
-      return;
-    }
-
-    localStorage.setItem("auth_role", selectedRole);
-
-    if (selectedRole === "admin") {
-      navigate("/admin");
-      return;
-    }
-
-    if (selectedRole === "client") {
-      navigate("/client");
-      return;
-    }
-
-    navigate("/dashboard");
   }
 
   return (
@@ -87,102 +48,47 @@ function Login() {
           <h2>Welcome Back</h2>
           <p className="login-subtitle">Sign in to your CafeSite account</p>
 
-          <div className="login-role-tabs" role="tablist" aria-label="Role selection">
-            <button
-              type="button"
-              className={selectedRole === "admin" ? "active" : ""}
-              onClick={() => setSelectedRole("admin")}
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              className={selectedRole === "owner" ? "active" : ""}
-              onClick={() => setSelectedRole("owner")}
-            >
-              Owner
-            </button>
-            <button
-              type="button"
-              className={selectedRole === "client" ? "active" : ""}
-              onClick={() => setSelectedRole("client")}
-            >
-              Client
-            </button>
-          </div>
-
-          <form className="form-inline" onSubmit={handleSubmit} noValidate>
-            <label htmlFor="login-email">Email Address</label>
+          <form className="form-inline" onSubmit={handleSubmit}>
+            <label>Email Address</label>
             <input
-              id="login-email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@admin"
+              placeholder="example@email.com"
             />
 
-            <label htmlFor="login-password">Password</label>
+            <label>Password</label>
             <div className="password-field-wrap">
               <input
-                id="login-password"
                 type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="•••••"
+                placeholder="Enter your password"
               />
               <button
-                type="button"
                 className="password-eye-btn"
-                aria-label="Toggle password visibility"
+                type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
-            <div className="login-meta-row">
-              <label htmlFor="remember-me" className="remember-me-check">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <span>Remember me</span>
-              </label>
-              <button type="button" className="forgot-link-btn">
-                Forgot password?
-              </button>
-            </div>
-
             <button type="submit">Sign in</button>
 
-            <p className={message ? "error" : ""} aria-live="polite">
-              {message}
-            </p>
+            {message && <p className="error">{message}</p>}
           </form>
 
-          <div className="quick-fill-box">
-            <p>QUICK FILL CREDENTIALS</p>
-            {quickFill.map((item) => (
-              <button
-                key={item.role}
-                type="button"
-                className="quick-fill-item"
-                onClick={() => handleQuickFill(item.role)}
-              >
-                <span>
-                  {item.icon} {item.label}: {item.email}
-                </span>
-                <span>→</span>
-              </button>
-            ))}
+          <div className="link">
+            Don't have an account?{" "}
+            <Link to="/register">Create your account</Link>
           </div>
 
           <div className="link">
-            Don't have an account? <Link to="/register">Create your account</Link>
+            Want to browse first?{" "}
+            <Link to="/">View cafes</Link>
           </div>
         </div>
       </div>

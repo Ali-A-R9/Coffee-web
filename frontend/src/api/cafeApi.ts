@@ -1,9 +1,10 @@
-// frontend/src/api/cafeApi.ts
-
 export type CafeData = {
+  _id?: string;
+  ownerId?: string;
   name: string;
-  description: string;
-  hours: string;
+  slug?: string;
+  description?: string;
+  hours?: string | { open?: string; close?: string };
   ownerName?: string;
   phone?: string;
   address?: string;
@@ -12,63 +13,136 @@ export type CafeData = {
   status?: string;
   zipCode?: string;
   logo?: string | null;
+  logoUrl?: string | null;
   workingHours?: Record<string, { open: string; close: string }>;
+  theme?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export function getCafe(user: string): CafeData | null {
-  const stored = localStorage.getItem("cafe_" + user);
-  return stored ? JSON.parse(stored) : null;
+export type PublicCafeData = CafeData & {
+  menu?: Array<{
+    name: string;
+    items: Array<{
+      id?: string;
+      name: string;
+      price: string;
+    }>;
+  }>;
+};
+
+const BASE_URL = "http://localhost:5000/api/cafes";
+
+function getAuthHeaders(json = false): HeadersInit {
+  const token = localStorage.getItem("token");
+
+  return {
+    ...(json ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${token}`,
+  };
 }
 
-export function saveCafe(user: string, data: CafeData) {
-  // Temporarily save the existing data
-  const existing = getCafe(user) || ({} as CafeData);
-
-  // Merge the old data with the new data being saved
-  localStorage.setItem("cafe_" + user, JSON.stringify({ ...existing, ...data }));
-}
-
-// Helper function that obtains all cafes and their data, for admin users.
-export function getAllCafes() {
-  const allCafes = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-
-    if (key && key.startsWith("cafe_")) {
-      const cafeData = JSON.parse(localStorage.getItem(key) || "{}");
-      
-      allCafes.push({
-	...cafeData,
-        id: key,
-        name: cafeData.name || "Unnamed Cafe",
-        ownerEmail: key.replace("cafe_", ""),
-        status: cafeData.status || "Pending", 
-        createdDate: cafeData.createdDate || new Date().toLocaleDateString(),
-      });
-    }
-  }
-  return allCafes;
-}
-
-export function saveCafeAdmin(id: string, updatedData: any) {
-
-  const existing = JSON.parse(localStorage.getItem(id) || "{}");
-  localStorage.setItem(id, JSON.stringify({ ...existing, ...updatedData }));
-}
-
-export function seedDatabase() {
-  // Make sure that the database is actually empty first.
-  if (getAllCafes().length > 0) return;
-
-  // Original mock data
-  const initialCafes = [
-    { id: "brew-bean", name: "Brew & Bean", ownerName: "John Smith", ownerEmail: "owner@owner.com", phone: "+1 (555) 123-4567", createdDate: "Jan 15, 2025", status: "Pending", address: "123 Main Street", city: "Seattle", state: "WA", zipCode: "98101", description: "A cozy neighborhood cafe.", websiteUrl: "https://brewbean.cafesite.com", plan: "Free Trial" },
-    { id: "daily-grind", name: "The Daily Grind", ownerName: "Jane Doe", ownerEmail: "contact@dailygrind.com", phone: "+1 (555) 890-1122", createdDate: "Jan 10, 2025", status: "Active", address: "212 Pine St", city: "Seattle", state: "WA", zipCode: "98122", description: "Fast and friendly morning coffee.", websiteUrl: "https://dailygrind.cafesite.com", plan: "Pro" },
-    { id: "espresso-express", name: "Espresso Express", ownerName: "Mike Johnson", ownerEmail: "hello@espressoexpress.com", phone: "+1 (555) 334-7788", createdDate: "Jan 8, 2025", status: "Active", address: "98 Lake Ave", city: "Seattle", state: "WA", zipCode: "98109", description: "Quick-service espresso bar.", websiteUrl: "https://espressoexpress.cafesite.com", plan: "Pro" }
-  ];
-
-  // Save to localstore
-  initialCafes.forEach((cafe) => {
-    localStorage.setItem("cafe_" + cafe.ownerEmail, JSON.stringify(cafe));
+export async function getMyCafe(): Promise<CafeData | null> {
+  const res = await fetch(`${BASE_URL}/my`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+    cache: "no-store",
   });
+
+  if (res.status === 404) {
+    return null;
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to load cafe");
+  }
+
+  return data;
+}
+
+export async function createCafe(data: Partial<CafeData>) {
+  const res = await fetch(BASE_URL, {
+    method: "POST",
+    headers: getAuthHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Failed to create cafe");
+  }
+
+  return result;
+}
+
+export async function updateCafe(data: Partial<CafeData>) {
+  const res = await fetch(`${BASE_URL}/my`, {
+    method: "PUT",
+    headers: getAuthHeaders(true),
+    body: JSON.stringify(data),
+  });
+
+  const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || "Failed to update cafe");
+  }
+
+  return result;
+}
+// ADMIN: get all cafes
+export async function getAllCafes() {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch("http://localhost:5000/api/cafes", {
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.json();
+}
+
+// ADMIN: update status
+export async function updateCafeStatus(id: string, status: string) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(
+    `http://localhost:5000/api/cafes/${id}/status`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to update cafe status");
+  }
+
+  return data;
+}
+
+export async function getPublicCafes(): Promise<PublicCafeData[]> {
+  const res = await fetch(`${BASE_URL}/public`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.message || "Failed to load public cafes");
+  }
+
+  return data;
 }

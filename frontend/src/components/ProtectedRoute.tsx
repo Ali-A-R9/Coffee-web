@@ -1,14 +1,21 @@
 import { Navigate } from "react-router-dom";
-import { getCurrentUser } from "../api/authApi";
 
 type Props = {
   children: React.ReactNode;
+  role?: string;
 };
 
-function ProtectedRoute({ children }: Props) {
-  const user = getCurrentUser();
+function ProtectedRoute({ children, role }: Props) {
+  const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("role");
 
-  if (!user) {
+  // not logged in
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  // wrong role
+  if (role && userRole !== role) {
     return <Navigate to="/" replace />;
   }
 

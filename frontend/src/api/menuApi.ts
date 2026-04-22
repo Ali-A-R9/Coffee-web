@@ -1,10 +1,28 @@
-import type { Category } from "../types/menu";
+const BASE_URL = "http://localhost:5000/api/menu";
 
-export function getMenu(user: string): Category[] {
-  const stored = localStorage.getItem("menu_" + user);
-  return stored ? JSON.parse(stored) : [];
+export async function getMenu() {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(BASE_URL, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.json();
 }
 
-export function saveMenu(user: string, menu: Category[]) {
-  localStorage.setItem("menu_" + user, JSON.stringify(menu));
+export async function saveMenu(menu: any) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(menu),
+  });
+
+  return res.json();
 }

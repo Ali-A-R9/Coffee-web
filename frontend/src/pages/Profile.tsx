@@ -1,58 +1,77 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  getMe,
+  updateMe,
+  logout,
+  type AuthUser,
+} from "../api/authApi";
 
 function Profile() {
   const navigate = useNavigate();
 
-  const [name, setName] = useState("");
+  const [profile, setProfile] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("Admin");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem("auth_user");
-    const savedName = localStorage.getItem("auth_name");
-    const savedPhone = localStorage.getItem("auth_phone");
-    const savedRole = localStorage.getItem("auth_role");
-
-    if (!savedEmail) {
-      navigate("/");
-      return;
+    async function loadProfile() {
+      try {
+        const data = await getMe();
+        setProfile(data);
+        setFullName(data.fullName || "");
+        setEmail(data.email || "");
+      } catch {
+        logout();
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setEmail(savedEmail);
-    setName(savedName || "");
-    setPhone(savedPhone || "");
-    setRole(savedRole || "Admin");
+    loadProfile();
   }, [navigate]);
 
-  function handleSave(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim()) {
+    if (!fullName.trim() || !email.trim()) {
       setMessage("Name and email are required.");
       setMessageType("error");
       return;
     }
 
-    localStorage.setItem("auth_name", name.trim());
-    localStorage.setItem("auth_user", email.trim());
-    localStorage.setItem("auth_phone", phone.trim());
-    localStorage.setItem("auth_role", role.trim());
+    try {
+      const result = await updateMe({
+        fullName: fullName.trim(),
+        email: email.trim(),
+      });
 
-    setMessage("Profile updated successfully.");
-    setMessageType("success");
+      setProfile(result.user);
+      localStorage.setItem("user", JSON.stringify(result.user));
+      localStorage.setItem("role", result.user.role);
+      setMessage("Profile updated successfully.");
+      setMessageType("success");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to update profile");
+      setMessageType("error");
+    }
   }
 
   function handleLogout() {
-    localStorage.removeItem("auth_user");
-    localStorage.removeItem("auth_name");
-    localStorage.removeItem("auth_phone");
-    localStorage.removeItem("auth_role");
-
+    logout();
     navigate("/");
+  }
+
+  if (loading) {
+    return <p style={{ padding: "40px" }}>Loading profile...</p>;
+  }
+
+  if (!profile) {
+    return <p style={{ padding: "40px" }}>Profile not found.</p>;
   }
 
   return (
@@ -65,8 +84,8 @@ function Profile() {
           <input
             type="text"
             required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
           />
 
           <label>Email</label>
@@ -77,19 +96,8 @@ function Profile() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <label>Phone</label>
-          <input
-            type="text"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-
           <label>Role</label>
-          <input
-            type="text"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          />
+          <input type="text" value={profile.role} disabled />
 
           <p className={messageType} aria-live="polite">
             {message}

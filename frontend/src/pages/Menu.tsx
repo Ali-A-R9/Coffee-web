@@ -1,85 +1,80 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser } from "../api/authApi";
 import { getMenu, saveMenu } from "../api/menuApi";
 import type { Category } from "../types/menu";
 
 function Menu() {
   const navigate = useNavigate();
-  const user = getCurrentUser();
 
-  const initialMenu = user ? getMenu(user) : [];
-
-  const [menuData, setMenuData] = useState<Category[]>(initialMenu);
+  const [menuData, setMenuData] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [itemName, setItemName] = useState("");
   const [itemPrice, setItemPrice] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number>(0);
 
-  function updateMenu(newMenu: Category[]) {
-    if (!user) return;
-    setMenuData(newMenu);
-    saveMenu(user, newMenu);
+  useEffect(() => {
+    async function loadMenu() {
+      try {
+        const data = await getMenu();
+        setMenuData(Array.isArray(data) ? data : []);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "Failed to load menu");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMenu();
+  }, []);
+
+  async function persistMenu(updated: Category[]) {
+    try {
+      setMenuData(updated);
+      await saveMenu(updated);
+      setMessage("Menu saved successfully.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save menu");
+    }
   }
 
   function addCategory(e: React.FormEvent) {
     e.preventDefault();
     if (!newCategory.trim()) return;
 
-    updateMenu([...menuData, { name: newCategory, items: [] }]);
+    persistMenu([...menuData, { name: newCategory.trim(), items: [] }]);
     setNewCategory("");
   }
 
   function addItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!itemName || !itemPrice) return;
-    if (menuData.length === 0) return;
+    if (!itemName.trim() || !itemPrice.trim() || menuData.length === 0) return;
 
     const updated = [...menuData];
     updated[selectedCategory].items.push({
-      name: itemName,
-      price: itemPrice,
+      name: itemName.trim(),
+      price: itemPrice.trim(),
     });
 
-    updateMenu(updated);
+    persistMenu(updated);
     setItemName("");
     setItemPrice("");
   }
 
   function deleteCategory(index: number) {
-    if (!confirm("Delete this category?")) return;
     const updated = menuData.filter((_, i) => i !== index);
-    updateMenu(updated);
-  }
-
-  function editCategory(index: number) {
-    const newName = prompt("New category name:", menuData[index].name);
-    if (!newName) return;
-
-    const updated = [...menuData];
-    updated[index].name = newName;
-    updateMenu(updated);
+    persistMenu(updated);
   }
 
   function deleteItem(catIndex: number, itemIndex: number) {
     const updated = [...menuData];
     updated[catIndex].items.splice(itemIndex, 1);
-    updateMenu(updated);
+    persistMenu(updated);
   }
 
-  function editItem(catIndex: number, itemIndex: number) {
-    const item = menuData[catIndex].items[itemIndex];
-    const newName = prompt("Edit item name:", item.name);
-    const newPrice = prompt("Edit item price:", item.price);
-    if (!newName || !newPrice) return;
-
-    const updated = [...menuData];
-    updated[catIndex].items[itemIndex] = {
-      name: newName,
-      price: newPrice,
-    };
-
-    updateMenu(updated);
+  if (loading) {
+    return <p style={{ padding: "40px" }}>Loading menu...</p>;
   }
 
   return (
@@ -87,11 +82,10 @@ function Menu() {
       <div className="card">
         <h1>Menu Management</h1>
 
-        {/* Add Category */}
         <form className="form-inline" onSubmit={addCategory}>
           <label>New Category</label>
           <input
-            placeholder="e.g. Hot Drinks"
+            placeholder="Category name"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
           />
@@ -100,11 +94,10 @@ function Menu() {
 
         <hr style={{ margin: "20px 0" }} />
 
-        {/* Add Item */}
         <form className="form-inline" onSubmit={addItem}>
           <label>Item Name</label>
           <input
-            placeholder="e.g. Latte"
+            placeholder="Item name"
             value={itemName}
             onChange={(e) => setItemName(e.target.value)}
           />
@@ -112,7 +105,7 @@ function Menu() {
           <label>Price</label>
           <input
             type="number"
-            placeholder="e.g. 18"
+            placeholder="Price"
             value={itemPrice}
             onChange={(e) => setItemPrice(e.target.value)}
           />
@@ -138,7 +131,6 @@ function Menu() {
 
         <hr style={{ margin: "20px 0" }} />
 
-        {/* Render Menu */}
         {menuData.length === 0 ? (
           <p className="small">No categories yet.</p>
         ) : (
@@ -149,12 +141,7 @@ function Menu() {
                 <div className="row-actions">
                   <button
                     className="ghost"
-                    onClick={() => editCategory(catIndex)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="ghost"
+                    type="button"
                     onClick={() => deleteCategory(catIndex)}
                   >
                     Delete
@@ -166,27 +153,15 @@ function Menu() {
                 <p className="small">No items in this category.</p>
               ) : (
                 category.items.map((item, itemIndex) => (
-                  <div
-                    key={itemIndex}
-                    className="row-space menu-item"
-                  >
+                  <div key={itemIndex} className="row-space menu-item">
                     <span>
                       {item.name} - {item.price} SAR
                     </span>
                     <div className="row-actions">
                       <button
                         className="ghost"
-                        onClick={() =>
-                          editItem(catIndex, itemIndex)
-                        }
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="ghost"
-                        onClick={() =>
-                          deleteItem(catIndex, itemIndex)
-                        }
+                        type="button"
+                        onClick={() => deleteItem(catIndex, itemIndex)}
                       >
                         Delete
                       </button>
@@ -198,8 +173,11 @@ function Menu() {
           ))
         )}
 
+        <p className={message ? "success" : "small"}>{message || " "}</p>
+
         <button
           className="ghost"
+          type="button"
           onClick={() => navigate("/dashboard")}
         >
           Back to Dashboard
