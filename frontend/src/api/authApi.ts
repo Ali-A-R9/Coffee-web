@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:5000/api/auth";
+const BASE_API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL = `${BASE_API_URL}/api/auth`;
 
 export type AuthUser = {
   id: string;
