@@ -199,7 +199,6 @@ JWT_SECRET
 
 ## ⚠️ Known Issues / Future Improvements
 
-- Menu currently replaces all items on save
 - No image upload (URL only)
 - Admin features can be expanded
 
