@@ -31,30 +31,91 @@ function Menu() {
 
   async function persistMenu(updated: Category[]) {
     try {
-      setMenuData(updated);
       await saveMenu(updated);
+      setMenuData(updated);
       setMessage("Menu saved successfully.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to save menu");
+
+      try {
+        const freshData = await getMenu();
+        setMenuData(Array.isArray(freshData) ? freshData : []);
+      } catch {
+        // Keep current UI if reload fails
+      }
     }
   }
 
   function addCategory(e: React.FormEvent) {
     e.preventDefault();
-    if (!newCategory.trim()) return;
 
-    persistMenu([...menuData, { name: newCategory.trim(), items: [] }]);
+    const categoryName = newCategory.trim();
+
+    if (!categoryName) {
+      setMessage("Category name is required.");
+      return;
+    }
+
+    const exists = menuData.some(
+      (category) => category.name.toLowerCase() === categoryName.toLowerCase()
+    );
+
+    if (exists) {
+      setMessage("This category already exists.");
+      return;
+    }
+
+    const updated: Category[] = [
+      ...menuData,
+      { name: categoryName, items: [] },
+    ];
+
+    persistMenu(updated);
     setNewCategory("");
   }
 
   function addItem(e: React.FormEvent) {
     e.preventDefault();
-    if (!itemName.trim() || !itemPrice.trim() || menuData.length === 0) return;
 
-    const updated = [...menuData];
-    updated[selectedCategory].items.push({
-      name: itemName.trim(),
-      price: itemPrice.trim(),
+    const name = itemName.trim();
+    const price = itemPrice.trim();
+
+    if (!name) {
+      setMessage("Item name is required.");
+      return;
+    }
+
+    if (!price) {
+      setMessage("Item price is required.");
+      return;
+    }
+
+    if (!/^\d+(\.\d{1,2})?$/.test(price)) {
+      setMessage("Price must be a valid number like 10 or 10.50");
+      return;
+    }
+
+    if (menuData.length === 0) {
+      setMessage("Please add a category first.");
+      return;
+    }
+
+    const duplicateItem = menuData[selectedCategory].items.some(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+
+    if (duplicateItem) {
+      setMessage("This item already exists in the selected category.");
+      return;
+    }
+
+    const updated: Category[] = menuData.map((category, index) => {
+      if (index !== selectedCategory) return category;
+
+      return {
+        ...category,
+        items: [...category.items, { name, price }],
+      };
     });
 
     persistMenu(updated);
@@ -63,13 +124,27 @@ function Menu() {
   }
 
   function deleteCategory(index: number) {
-    const updated = menuData.filter((_, i) => i !== index);
+    const updated: Category[] = menuData.filter((_, i) => i !== index);
+
+    if (updated.length === 0) {
+      setSelectedCategory(0);
+    } else if (selectedCategory >= updated.length) {
+      setSelectedCategory(updated.length - 1);
+    }
+
     persistMenu(updated);
   }
 
   function deleteItem(catIndex: number, itemIndex: number) {
-    const updated = [...menuData];
-    updated[catIndex].items.splice(itemIndex, 1);
+    const updated: Category[] = menuData.map((category, index) => {
+      if (index !== catIndex) return category;
+
+      return {
+        ...category,
+        items: category.items.filter((_, i) => i !== itemIndex),
+      };
+    });
+
     persistMenu(updated);
   }
 
@@ -104,7 +179,7 @@ function Menu() {
 
           <label>Price</label>
           <input
-            type="number"
+            type="text"
             placeholder="Price"
             value={itemPrice}
             onChange={(e) => setItemPrice(e.target.value)}
@@ -112,11 +187,12 @@ function Menu() {
 
           <label>Select Category</label>
           <select
-            value={selectedCategory}
+            value={menuData.length > 0 ? selectedCategory : ""}
             onChange={(e) => setSelectedCategory(Number(e.target.value))}
+            disabled={menuData.length === 0}
           >
             {menuData.length === 0 ? (
-              <option disabled>No categories available</option>
+              <option value="">No categories available</option>
             ) : (
               menuData.map((cat, index) => (
                 <option key={index} value={index}>
