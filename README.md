@@ -117,8 +117,8 @@ http://localhost:5173
 
 ```env
 PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
+MONGO_URI=the_mongodb_connection_string
+JWT_SECRET=the_secret_key
 CLIENT_URL=http://localhost:5173
 ```
 
@@ -205,14 +205,5 @@ JWT_SECRET
 
 ---
 
-## 🧠 Contribution (Ali – Menu Management)
-
-- Implemented menu CRUD functionality
-- Added frontend validation
-- Added backend validation
-- Fixed UI state bug (very important fix)
-- Improved API error handling
-
----
 
 © 2026 CafeSite Team
