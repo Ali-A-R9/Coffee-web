@@ -21,6 +21,12 @@ import {
 } from "lucide-react";
 import { getCurrentUser, logout } from "../api/authApi";
 import { getPublicCafes, type PublicCafeData } from "../api/cafeApi";
+import {
+  createOrder,
+  getClientOrders,
+  type CafeOrder,
+  type OrderStatus,
+} from "../api/orderApi";
 import CafeMenuVisualization from "../components/CafeMenuVisualization";
 import { useUiTheme } from "../hooks/useUiTheme";
 
@@ -71,15 +77,6 @@ type PaymentNotice = {
   title: string;
   message: string;
   note?: string;
-};
-
-type OrderRecord = {
-  id: string;
-  placedAt: string;
-  items: CartItem[];
-  total: number;
-  status: "Confirmed";
-  paymentMethod?: string;
 };
 
 const EMPTY_ADDRESS: ClientAddress = {
@@ -229,6 +226,10 @@ function getCardBrand(cardNumber: string) {
   return "Card";
 }
 
+function getOrderStatusClass(status: OrderStatus) {
+  return `cx-order-status-chip ${status.toLowerCase().replace(/\s+/g, "-")}`;
+}
+
 function ClientView() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
@@ -237,7 +238,6 @@ function ClientView() {
   const isLoggedIn = Boolean(currentUser);
   const canOrder = currentUser?.role === "client";
   const clientStorageId = currentUser?.id || currentUser?.email || "guest";
-  const orderStorageKey = `cafesite-orders:${clientStorageId}`;
   const addressStorageKey = `cafesite-address:${clientStorageId}`;
   const cardsStorageKey = `cafesite-cards:${clientStorageId}`;
 
@@ -250,7 +250,8 @@ function ClientView() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
-  const [orderHistory, setOrderHistory] = useState<OrderRecord[]>([]);
+  const [orderHistory, setOrderHistory] = useState<CafeOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [clientAddress, setClientAddress] = useState<ClientAddress>(EMPTY_ADDRESS);
   const [savedCards, setSavedCards] = useState<SavedPaymentCard[]>([]);
   const [savedCardForm, setSavedCardForm] = useState<SavedCardForm>(EMPTY_SAVED_CARD_FORM);
@@ -286,15 +287,6 @@ function ClientView() {
 
   useEffect(() => {
     try {
-      const storedOrders = window.localStorage.getItem(orderStorageKey);
-      setOrderHistory(storedOrders ? JSON.parse(storedOrders) : []);
-    } catch {
-      setOrderHistory([]);
-    }
-  }, [orderStorageKey]);
-
-  useEffect(() => {
-    try {
       const storedAddress = window.localStorage.getItem(addressStorageKey);
       setClientAddress(storedAddress ? { ...EMPTY_ADDRESS, ...JSON.parse(storedAddress) } : EMPTY_ADDRESS);
     } catch {
@@ -310,6 +302,15 @@ function ClientView() {
       setSavedCards([]);
     }
   }, [cardsStorageKey]);
+
+  useEffect(() => {
+    if (!canOrder) {
+      setOrderHistory([]);
+      return;
+    }
+
+    loadClientOrderHistory();
+  }, [canOrder]);
 
   useEffect(() => {
     if (!slug || loading) return;
@@ -375,6 +376,9 @@ function ClientView() {
     setViewMode("orders");
     setMessage("");
     setSideNavOpen(false);
+    if (canOrder) {
+      loadClientOrderHistory();
+    }
   }
 
   function openCafeList() {
@@ -594,26 +598,70 @@ function ClientView() {
     return validateCardDetails(paymentForm);
   }
 
-  function completeDemoOrder(paymentMethod: string) {
-    const nextOrder: OrderRecord = {
-      id: `ORD-${Date.now()}`,
-      placedAt: new Date().toISOString(),
-      items: cartItems,
-      total,
-      status: "Confirmed",
-      paymentMethod,
-    };
-    const nextOrderHistory = [nextOrder, ...orderHistory];
+  async function loadClientOrderHistory() {
+    try {
+      setOrdersLoading(true);
+      const orders = await getClientOrders();
+      setOrderHistory(orders);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to load your orders.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  }
 
-    setOrderHistory(nextOrderHistory);
-    window.localStorage.setItem(orderStorageKey, JSON.stringify(nextOrderHistory));
-    setOrderSuccess(true);
-    setCart({});
-    setCheckoutOpen(false);
-    setSavedCardPickerOpen(false);
-    setSavedCardAddOpen(false);
-    setSavedCardCvv("");
-    setMessage("Your demo order was placed successfully.");
+  async function completeDemoOrder(paymentMethod: string) {
+    if (!selectedCafe?._id) {
+      showPaymentPopup("error", "Choose a cafe", "Please open a cafe menu before placing an order.");
+      return null;
+    }
+
+    if (cartItems.length === 0) {
+      showPaymentPopup("error", "Cart is empty", "Please add menu items before checkout.");
+      return null;
+    }
+
+    const addressError = validateAddress(clientAddress);
+    if (addressError) {
+      showPaymentPopup(
+        "error",
+        "Delivery address needed",
+        `${addressError} Open Account to save your address, then return to checkout.`
+      );
+      return null;
+    }
+
+    try {
+      const order = await createOrder({
+        cafeId: selectedCafe._id,
+        cafeName: selectedCafe.name,
+        clientAddress,
+        paymentMethod,
+        items: cartItems.map((item) => ({
+          itemId: item.itemId,
+          name: item.itemName,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      });
+
+      setOrderHistory((prev) => [order, ...prev]);
+      setOrderSuccess(true);
+      setCart({});
+      setCheckoutOpen(false);
+      setSavedCardPickerOpen(false);
+      setSavedCardAddOpen(false);
+      setSavedCardCvv("");
+      setMessage(`Order ${order.orderNumber} was sent to ${order.cafeName}.`);
+      return order;
+    } catch (error) {
+      showPaymentPopup(
+        "error",
+        "Order was not placed",
+        error instanceof Error ? error.message : "Failed to place this order."
+      );
+      return null;
+    }
   }
 
   function saveClientAddress() {
@@ -700,7 +748,7 @@ function ClientView() {
     setSavedCardCvv("");
   }
 
-  function payWithSavedCard() {
+  async function payWithSavedCard() {
     const selectedCard = savedCards.find((card) => card.id === selectedSavedCardId);
     const cvvDigits = getDigits(savedCardCvv);
 
@@ -714,16 +762,18 @@ function ClientView() {
       return;
     }
 
-    completeDemoOrder(`${selectedCard.brand} ending ${selectedCard.last4}`);
+    const order = await completeDemoOrder(`${selectedCard.brand} ending ${selectedCard.last4}`);
+    if (!order) return;
+
     showPaymentPopup(
       "success",
       "Payment approved",
-      `Your order was confirmed with ${selectedCard.brand} ending ${selectedCard.last4}.`,
+      `Order ${order.orderNumber} was confirmed with ${selectedCard.brand} ending ${selectedCard.last4}.`,
       "Note: demo payment only. No real payment was processed."
     );
   }
 
-  function submitDemoPayment(e: React.FormEvent<HTMLFormElement>) {
+  async function submitDemoPayment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const validationError = validatePaymentForm();
@@ -732,13 +782,15 @@ function ClientView() {
       return;
     }
 
+    const order = await completeDemoOrder("Manual demo card");
+    if (!order) return;
+
     showPaymentPopup(
       "success",
       "Payment approved",
-      "Your order was confirmed.",
+      `Order ${order.orderNumber} was confirmed and sent to ${order.cafeName}.`,
       "Note: demo payment only. No real payment was processed."
     );
-    completeDemoOrder("Manual demo card");
     setPaymentForm({
       cardholderName: "",
       cardNumber: "",
@@ -763,8 +815,9 @@ function ClientView() {
       if (!current) return prev;
 
       if (current.quantity === 1) {
-        const { [key]: _removed, ...rest } = prev;
-        return rest;
+        const nextCart = { ...prev };
+        delete nextCart[key];
+        return nextCart;
       }
 
       return {
@@ -932,7 +985,7 @@ function ClientView() {
               <section className="cx-panel">
                 <h2 style={{ textAlign: "left" }}>Order Confirmed</h2>
                 <p className="small">
-                  Your latest order was saved to Orders. Demo payment only.
+                  Your latest order was sent to the cafe owner. Track live status in Orders.
                 </p>
               </section>
             )}
@@ -1215,14 +1268,27 @@ function ClientView() {
                 <p className="cx-kicker">Client orders</p>
                 <h2>Orders</h2>
               </div>
-              <span>{orderHistory.length} saved</span>
+              <div className="cx-orders-actions">
+                <span>{orderHistory.length} live</span>
+                {canOrder && (
+                  <button type="button" className="ghost" onClick={loadClientOrderHistory}>
+                    Refresh
+                  </button>
+                )}
+              </div>
             </div>
 
             {!isLoggedIn ? (
               <section className="cx-empty">
                 <ReceiptText size={22} />
                 <h3>Log in to view orders</h3>
-                <p>Your orders will appear here after you sign in and place demo orders.</p>
+                <p>Your orders will appear here after you sign in and place orders.</p>
+              </section>
+            ) : ordersLoading ? (
+              <section className="cx-empty">
+                <ReceiptText size={22} />
+                <h3>Loading orders</h3>
+                <p>Checking the latest statuses from cafes.</p>
               </section>
             ) : orderHistory.length === 0 ? (
               <section className="cx-empty">
@@ -1233,23 +1299,33 @@ function ClientView() {
             ) : (
               <div className="cx-orders-list">
                 {orderHistory.map((order) => (
-                  <article className="cx-order-card" key={order.id}>
+                  <article className="cx-order-card" key={order._id}>
                     <div className="cx-order-card-head">
                       <div>
-                        <strong>{order.id}</strong>
-                        <p>{formatOrderDate(order.placedAt)}</p>
+                        <strong>{order.orderNumber}</strong>
+                        <p>{formatOrderDate(order.createdAt)}</p>
+                        <p>{order.cafeName}</p>
                         {order.paymentMethod && <p>Paid with {order.paymentMethod}</p>}
                       </div>
-                      <span>{order.status}</span>
+                      <span className={getOrderStatusClass(order.status)}>{order.status}</span>
                     </div>
 
                     <div className="cx-order-items">
                       {order.items.map((item) => (
-                        <div key={`${order.id}-${item.cafeId}-${item.itemId}`}>
-                          <span>{item.quantity}x {item.itemName}</span>
+                        <div key={`${order._id}-${item.itemId}-${item.name}`}>
+                          <span>{item.quantity}x {item.name}</span>
                           <strong>{(item.price * item.quantity).toFixed(2)} SAR</strong>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="cx-order-delivery">
+                      <strong>Delivery to {order.clientAddress?.fullName || "Client"}</strong>
+                      <p>
+                        {[order.clientAddress?.line1, order.clientAddress?.city, order.clientAddress?.region, order.clientAddress?.postalCode]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </p>
                     </div>
 
                     <div className="cx-summary">

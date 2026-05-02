@@ -1,5 +1,13 @@
-import { Clock3, Coffee, MapPin } from "lucide-react";
+import { Clock3, Coffee, Globe2, Mail, MapPin, Phone } from "lucide-react";
 import type { ReactNode } from "react";
+
+type CafeSocialLinks = {
+  instagram?: string;
+  x?: string;
+  tiktok?: string;
+  snapchat?: string;
+  website?: string;
+};
 
 export type MenuVisualCafe = {
   name: string;
@@ -8,6 +16,9 @@ export type MenuVisualCafe = {
   status?: string;
   hours?: string | { open?: string; close?: string };
   logoUrl?: string | null;
+  contactEmail?: string;
+  phone?: string;
+  socialLinks?: CafeSocialLinks;
   address?: string;
   city?: string;
   state?: string;
@@ -58,6 +69,13 @@ const DAY_KEYS = [
   "thursday",
   "friday",
   "saturday",
+];
+const SOCIAL_LINK_FIELDS: Array<{ key: keyof CafeSocialLinks; label: string }> = [
+  { key: "instagram", label: "Instagram" },
+  { key: "x", label: "X" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "snapchat", label: "Snapchat" },
+  { key: "website", label: "Website" },
 ];
 
 function formatShortTime(value?: string) {
@@ -146,6 +164,71 @@ function getDirectionsUrl(cafe: MenuVisualCafe) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
+function getPhoneHref(phone?: string) {
+  const normalized = phone?.replace(/[^\d+]/g, "") || "";
+  return normalized ? `tel:${normalized}` : "";
+}
+
+function getSocialHref(key: keyof CafeSocialLinks, value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^[\w.-]+\.[a-z]{2,}/i.test(trimmed)) {
+    return `https://${trimmed.replace(/^\/+/, "")}`;
+  }
+
+  const handle = trimmed.replace(/^@/, "").replace(/^\/+/, "");
+  if (!handle) return "";
+
+  if (key === "instagram") return `https://instagram.com/${handle}`;
+  if (key === "x") return `https://x.com/${handle}`;
+  if (key === "tiktok") return `https://www.tiktok.com/@${handle.replace(/^@/, "")}`;
+  if (key === "snapchat") return `https://www.snapchat.com/add/${handle}`;
+  return `https://${handle}`;
+}
+
+function getSocialDisplay(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      return new URL(trimmed).hostname.replace(/^www\./, "");
+    } catch {
+      return trimmed;
+    }
+  }
+  if (/^[\w.-]+\.[a-z]{2,}/i.test(trimmed)) {
+    try {
+      return new URL(`https://${trimmed}`).hostname.replace(/^www\./, "");
+    } catch {
+      return trimmed;
+    }
+  }
+  return trimmed.startsWith("@") ? trimmed : `@${trimmed.replace(/^\/+/, "")}`;
+}
+
+function getSocialRows(cafe: MenuVisualCafe) {
+  return SOCIAL_LINK_FIELDS.map((field) => {
+    const value = cafe.socialLinks?.[field.key]?.trim() || "";
+    return value
+      ? {
+          ...field,
+          value,
+          href: getSocialHref(field.key, value),
+          display: getSocialDisplay(value),
+        }
+      : null;
+  }).filter(
+    (row): row is {
+      key: keyof CafeSocialLinks;
+      label: string;
+      value: string;
+      href: string;
+      display: string;
+    } => Boolean(row)
+  );
+}
+
 function getOpeningRows(cafe: MenuVisualCafe) {
   const rows = WEEK_DAYS.map((day) => {
     const dayHours = cafe.workingHours?.[day.key];
@@ -186,6 +269,8 @@ function CafeMenuVisualization({
       ? menu
       : menu.filter((category) => category.name === activeCategory);
   const actionCopy = context === "owner-preview" ? "Add" : canOrder ? "Add" : "Explore";
+  const phoneHref = getPhoneHref(cafe.phone);
+  const socialRows = getSocialRows(cafe);
 
   return (
     <div className="cx-menu-visual">
@@ -351,6 +436,37 @@ function CafeMenuVisualization({
                 <MapPin size={13} />
                 Get Directions
               </a>
+            )}
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <div className="cx-contact-list">
+              {cafe.phone ? (
+                <a href={phoneHref || undefined}>
+                  <Phone size={14} />
+                  <span>{cafe.phone}</span>
+                </a>
+              ) : (
+                <p>Contact number not available yet.</p>
+              )}
+              {cafe.contactEmail && (
+                <a href={`mailto:${cafe.contactEmail}`}>
+                  <Mail size={14} />
+                  <span>{cafe.contactEmail}</span>
+                </a>
+              )}
+            </div>
+
+            {socialRows.length > 0 && (
+              <div className="cx-social-links" aria-label="Cafe social media accounts">
+                {socialRows.map((social) => (
+                  <a key={social.key} href={social.href} target="_blank" rel="noreferrer">
+                    <Globe2 size={13} />
+                    <span>{social.label}</span>
+                    <strong>{social.display}</strong>
+                  </a>
+                ))}
+              </div>
             )}
           </div>
           <div>

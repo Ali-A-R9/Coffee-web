@@ -8,6 +8,15 @@ import { useUiTheme } from "../hooks/useUiTheme";
 import type { CafeData } from "../api/cafeApi";
 import type { Category } from "../types/menu";
 
+function getClientVisibleMenu(menu: Category[]) {
+  return menu
+    .filter((category) => category.visible !== false)
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => item.visible !== false),
+    }));
+}
+
 function PublicPreview() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useUiTheme("customer-menu-theme");
@@ -25,7 +34,7 @@ function PublicPreview() {
         const safeMenu = Array.isArray(menu) ? menu : [];
 
         setCafe(cafeData);
-        setMenuData(safeMenu);
+        setMenuData(getClientVisibleMenu(safeMenu));
         setActiveCategory("all");
         setMessage("");
       } catch (error) {

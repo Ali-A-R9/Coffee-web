@@ -5,7 +5,7 @@ function useAutoLogout(timeout = 10 * 60 * 1000) { // 10 minutes
   const navigate = useNavigate();
 
   useEffect(() => {
-    let timer: any;
+    let timer: ReturnType<typeof window.setTimeout>;
 
     const logout = () => {
       localStorage.removeItem("token");

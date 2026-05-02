@@ -1,3 +1,11 @@
+export type CafeSocialLinks = {
+  instagram?: string;
+  x?: string;
+  tiktok?: string;
+  snapchat?: string;
+  website?: string;
+};
+
 export type CafeData = {
   _id?: string;
   ownerId?: string;
@@ -8,6 +16,7 @@ export type CafeData = {
   ownerName?: string;
   contactEmail?: string;
   phone?: string;
+  socialLinks?: CafeSocialLinks;
   address?: string;
   city?: string;
   state?: string;
