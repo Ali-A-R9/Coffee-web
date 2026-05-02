@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../api/authApi";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LifeBuoy } from "lucide-react";
 
 function Login() {
   const navigate = useNavigate();
@@ -9,6 +9,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetHelp, setShowResetHelp] = useState(false);
   const [message, setMessage] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -76,6 +77,17 @@ function Login() {
               </button>
             </div>
 
+            <div className="login-meta-row">
+              <span />
+              <button
+                type="button"
+                className="forgot-link-btn"
+                onClick={() => setShowResetHelp(true)}
+              >
+                Forgot / reset password?
+              </button>
+            </div>
+
             <button type="submit">Sign in</button>
 
             {message && <p className="error">{message}</p>}
@@ -92,6 +104,36 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {showResetHelp && (
+        <div className="reset-modal-backdrop" role="presentation">
+          <section
+            className="reset-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-modal-title"
+          >
+            <div className="reset-modal-icon" aria-hidden="true">
+              <LifeBuoy size={26} />
+            </div>
+            <h2 id="reset-modal-title">Password Reset Support</h2>
+            <p>
+              To reset your password, please contact support at{" "}
+              <strong>s202253340@kfupm.edu.sa</strong>.
+            </p>
+            <p>
+              We will verify your account and provide a temporary password for you.
+            </p>
+            <button
+              type="button"
+              className="reset-modal-close"
+              onClick={() => setShowResetHelp(false)}
+            >
+              Close
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
