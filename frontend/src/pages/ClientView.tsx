@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Clock3,
@@ -7,11 +7,15 @@ import {
   LogIn,
   LogOut,
   MapPin,
+  Moon,
   Search,
+  Sun,
   UserRound,
 } from "lucide-react";
 import { getCurrentUser, logout } from "../api/authApi";
 import { getPublicCafes, type PublicCafeData } from "../api/cafeApi";
+import CafeMenuVisualization from "../components/CafeMenuVisualization";
+import { useUiTheme } from "../hooks/useUiTheme";
 
 type ViewMode = "list" | "menu" | "account";
 
@@ -31,15 +35,31 @@ type PaymentForm = {
   cvv: string;
 };
 
+function formatShortTime(value?: string) {
+  if (!value) return "";
+
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+
+  const hour = Number(match[1]);
+  const minute = match[2];
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+
+  return `${displayHour}:${minute} ${period}`;
+}
+
 function formatHours(hours: PublicCafeData["hours"]) {
   if (!hours) return "Hours not available";
   if (typeof hours === "string") return hours;
   if (!hours.open || !hours.close) return "Hours not available";
-  return `${hours.open} - ${hours.close}`;
+  return `${formatShortTime(hours.open)} - ${formatShortTime(hours.close)}`;
 }
 
 function ClientView() {
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
+  const { isDark, toggleTheme } = useUiTheme("customer-menu-theme");
   const currentUser = getCurrentUser();
   const isLoggedIn = Boolean(currentUser);
   const canOrder = currentUser?.role === "client";
@@ -47,6 +67,7 @@ function ClientView() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [cafes, setCafes] = useState<PublicCafeData[]>([]);
   const [selectedCafeId, setSelectedCafeId] = useState("");
+  const [activeMenuCategory, setActiveMenuCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -76,6 +97,20 @@ function ClientView() {
     loadCafes();
   }, []);
 
+  useEffect(() => {
+    if (!slug || loading) return;
+
+    const cafeFromSlug = cafes.find((cafe) => cafe.slug === slug);
+
+    if (cafeFromSlug?._id) {
+      openCafe(cafeFromSlug._id);
+      return;
+    }
+
+    setViewMode("list");
+    setMessage("Cafe menu is not available yet. It may still need admin approval.");
+  }, [slug, cafes, loading]);
+
   const filteredCafes = useMemo(() => {
     const key = searchTerm.trim().toLowerCase();
     if (!key) return cafes;
@@ -93,6 +128,8 @@ function ClientView() {
     return cafes.find((cafe) => cafe._id === selectedCafeId) || null;
   }, [cafes, selectedCafeId]);
 
+  const selectedMenu = useMemo(() => selectedCafe?.menu || [], [selectedCafe]);
+
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const total = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -107,6 +144,7 @@ function ClientView() {
 
   function openCafe(cafeId: string) {
     setSelectedCafeId(cafeId);
+    setActiveMenuCategory("all");
     setViewMode("menu");
     setMessage("");
   }
@@ -231,23 +269,41 @@ function ClientView() {
   }
 
   if (loading) {
-    return <p style={{ padding: "40px" }}>Loading cafes...</p>;
+    return (
+      <div className={`cx-app ${isDark ? "cx-dark" : ""}`}>
+        <main className="cx-content">
+          <section className="cx-panel">
+            <p>Loading cafes...</p>
+          </section>
+        </main>
+      </div>
+    );
   }
 
   return (
-    <div className="cx-app">
+    <div className={`cx-app ${isDark ? "cx-dark" : ""}`}>
       <header className="cx-topbar">
         <div>
           <p className="cx-topbar-sub">Public Cafe Explorer</p>
           <h1>CafeSite</h1>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div className="cx-topbar-actions">
           {viewMode !== "list" && (
             <button className="cx-notify" type="button" onClick={() => setViewMode("list")}>
               <ArrowLeft size={16} />
             </button>
           )}
+
+          <button
+            className="cx-notify cx-theme-toggle"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Light mode" : "Dark mode"}
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
 
           <button className="cx-notify" type="button" onClick={openAccount}>
             <UserRound size={16} />
@@ -317,7 +373,7 @@ function ClientView() {
                 <article className="cx-cafe-card" key={cafe._id}>
                   <div className="cx-cafe-head">
                     <div className="cx-cafe-icon" aria-hidden="true">
-                      <Coffee size={15} />
+                      {cafe.logoUrl ? <img src={cafe.logoUrl} alt="" /> : <Coffee size={15} />}
                     </div>
                     <div>
                       <h3>{cafe.name}</h3>
@@ -333,6 +389,7 @@ function ClientView() {
                       <Clock3 size={13} /> {formatHours(cafe.hours)}
                     </span>
                     <span className="open">{cafe.status}</span>
+                    <span>{(cafe.menu || []).reduce((sum, category) => sum + category.items.length, 0)} items</span>
                   </div>
 
                   <div className="cx-cafe-actions">
@@ -351,62 +408,23 @@ function ClientView() {
         )}
 
         {viewMode === "menu" && (
-          <section className="cx-panel">
+          <section className="cx-menu-page">
             {!selectedCafe ? (
               <section className="cx-empty">
                 <p>Select a cafe from the home page first.</p>
               </section>
             ) : (
               <>
-                <div className="cx-details-head">
-                  <div className="cx-cafe-icon" aria-hidden="true">
-                    <Coffee size={16} />
-                  </div>
-                  <div>
-                    <h2>{selectedCafe.name}</h2>
-                    <p>{selectedCafe.description || "No description available."}</p>
-                  </div>
-                </div>
-
-                {!canOrder && (
-                  <section className="cx-empty" style={{ marginTop: "12px" }}>
-                    <p>
-                      {isLoggedIn
-                        ? "You can explore this cafe menu, but only client accounts can place orders."
-                        : "Guests can explore this cafe menu, but ordering requires a registered client account."}
-                    </p>
-                  </section>
-                )}
-
-                {(selectedCafe.menu || []).length === 0 ? (
-                  <section className="cx-empty">
-                    <p>No menu items available.</p>
-                  </section>
-                ) : (
-                  (selectedCafe.menu || []).map((category) => (
-                    <section key={category.name} className="cx-menu-block">
-                      <h3>{category.name}</h3>
-                      {category.items.map((item) => (
-                        <article key={item.id || item.name} className="cx-menu-item">
-                          <div>
-                            <strong>{item.name}</strong>
-                          </div>
-                          <div className="cx-item-actions">
-                            <span>{item.price} SAR</span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                addToCart(item.id || item.name, item.name, item.price)
-                              }
-                            >
-                              {canOrder ? "Add" : "Explore"}
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                    </section>
-                  ))
-                )}
+                <CafeMenuVisualization
+                  cafe={selectedCafe}
+                  menu={selectedMenu}
+                  activeCategory={activeMenuCategory}
+                  onCategoryChange={setActiveMenuCategory}
+                  context="client"
+                  canOrder={canOrder}
+                  isLoggedIn={isLoggedIn}
+                  onAddItem={(item, itemKey) => addToCart(item.id || itemKey, item.name, item.price)}
+                />
               </>
             )}
           </section>

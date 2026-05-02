@@ -1,33 +1,37 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Eye, Moon, Sun } from "lucide-react";
 import { getMyCafe } from "../api/cafeApi";
 import { getMenu } from "../api/menuApi";
+import CafeMenuVisualization from "../components/CafeMenuVisualization";
+import { useUiTheme } from "../hooks/useUiTheme";
 import type { CafeData } from "../api/cafeApi";
 import type { Category } from "../types/menu";
 
-function formatHours(hours: CafeData["hours"]) {
-  if (!hours) return "";
-  if (typeof hours === "string") return hours;
-  if (!hours.open || !hours.close) return "";
-  return `${hours.open} - ${hours.close}`;
-}
-
 function PublicPreview() {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useUiTheme("customer-menu-theme");
 
   const [cafe, setCafe] = useState<CafeData | null>(null);
   const [menuData, setMenuData] = useState<Category[]>([]);
+  const [activeCategory, setActiveCategory] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     async function fetchData() {
       try {
         const [cafeData, menu] = await Promise.all([getMyCafe(), getMenu()]);
+        const safeMenu = Array.isArray(menu) ? menu : [];
+
         setCafe(cafeData);
-        setMenuData(Array.isArray(menu) ? menu : []);
-      } catch {
+        setMenuData(safeMenu);
+        setActiveCategory("all");
+        setMessage("");
+      } catch (error) {
         setCafe(null);
         setMenuData([]);
+        setMessage(error instanceof Error ? error.message : "Failed to load preview");
       } finally {
         setLoading(false);
       }
@@ -36,57 +40,96 @@ function PublicPreview() {
     fetchData();
   }, []);
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className={`cx-app owner-client-preview ${isDark ? "cx-dark" : ""}`}>
+        <main className="cx-content">
+          <section className="cx-panel">
+            <p>Loading customer preview...</p>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   if (!cafe) {
     return (
-      <div className="container">
-        <div className="card">
-          <h2>No cafe found</h2>
-          <button onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </button>
-        </div>
+      <div className={`cx-app owner-client-preview ${isDark ? "cx-dark" : ""}`}>
+        <main className="cx-content">
+          <section className="cx-panel">
+            <h2>No cafe found</h2>
+            <p className="small">{message || "Create your cafe first, then preview it here."}</p>
+            <button className="cx-back" type="button" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft size={14} />
+              Back to Dashboard
+            </button>
+          </section>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div className="card public-container">
-        <div className="public-header">
-          <h1>{cafe.name}</h1>
-          <p className="small">{cafe.description}</p>
-          <p className="small">
-            {formatHours(cafe.hours) ? `Working Hours: ${formatHours(cafe.hours)}` : ""}
-          </p>
+    <div className={`cx-app owner-client-preview ${isDark ? "cx-dark" : ""}`}>
+      <header className="cx-topbar">
+        <div>
+          <p className="cx-topbar-sub">Owner Preview</p>
+          <h1>Customer View</h1>
         </div>
 
-        <hr style={{ margin: "20px 0" }} />
+        <div className="cx-topbar-actions">
+          <button
+            className="cx-notify cx-theme-toggle"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Light mode" : "Dark mode"}
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
 
-        {menuData.length === 0 ? (
-          <p className="small">No menu available yet.</p>
-        ) : (
-          menuData.map((category, catIndex) => (
-            <div key={catIndex} className="public-category">
-              <h3>{category.name}</h3>
+          <button className="cx-notify" type="button" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft size={16} />
+          </button>
+        </div>
+      </header>
 
-              {category.items.map((item, itemIndex) => (
-                <div key={itemIndex} className="public-item">
-                  <span>{item.name}</span>
-                  <span>{item.price} SAR</span>
-                </div>
-              ))}
-            </div>
-          ))
-        )}
+      <main className="cx-content">
+        <section className="cx-hero owner-preview-hero">
+          <div>
+            <p>This is how customers will browse your cafe menu.</p>
+            <h2>{cafe.name}</h2>
+          </div>
+          <span className="owner-preview-chip">
+            <Eye size={14} />
+            Preview only
+          </span>
+        </section>
 
-        <hr style={{ margin: "20px 0" }} />
+        <CafeMenuVisualization
+          cafe={cafe}
+          menu={menuData}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          context="owner-preview"
+          emptyAction={
+            <button type="button" onClick={() => navigate("/dashboard")}>
+              Back to Dashboard
+            </button>
+          }
+        />
 
-        <button className="ghost" onClick={() => navigate("/dashboard")}>
-          Back to Dashboard
-        </button>
-      </div>
+        <section className="cx-panel owner-preview-note">
+          <p>
+            Customers will see this menu after your cafe is approved and marked Active by the admin.
+            This preview always uses your latest saved cafe profile and menu.
+          </p>
+          <button className="cx-back" type="button" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft size={14} />
+            Back to Dashboard
+          </button>
+        </section>
+      </main>
     </div>
   );
 }

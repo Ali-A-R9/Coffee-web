@@ -20,6 +20,7 @@ function AppRoutes() {
 
       {/* Public Routes */}
       <Route path="/" element={<ClientView />} />
+      <Route path="/cafe/:slug" element={<ClientView />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
