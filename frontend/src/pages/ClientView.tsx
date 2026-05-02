@@ -35,6 +35,13 @@ type PaymentForm = {
   cvv: string;
 };
 
+type PaymentNotice = {
+  type: "error" | "success";
+  title: string;
+  message: string;
+  note?: string;
+};
+
 function formatShortTime(value?: string) {
   if (!value) return "";
 
@@ -56,6 +63,26 @@ function formatHours(hours: PublicCafeData["hours"]) {
   return `${formatShortTime(hours.open)} - ${formatShortTime(hours.close)}`;
 }
 
+function getCurrentMonthValue() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${now.getFullYear()}-${month}`;
+}
+
+function getDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function formatCardNumber(value: string) {
+  return getDigits(value)
+    .slice(0, 19)
+    .replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
+function normalizeCardholderName(value: string) {
+  return value.slice(0, 60);
+}
+
 function ClientView() {
   const navigate = useNavigate();
   const { slug } = useParams<{ slug?: string }>();
@@ -73,7 +100,7 @@ function ClientView() {
   const [message, setMessage] = useState("");
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [checkoutMessage, setCheckoutMessage] = useState("");
+  const [paymentNotice, setPaymentNotice] = useState<PaymentNotice | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
     cardholderName: "",
@@ -135,6 +162,7 @@ function ClientView() {
     () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cartItems]
   );
+  const minExpiryMonth = getCurrentMonthValue();
 
   function handleLogout() {
     logout();
@@ -194,13 +222,13 @@ function ClientView() {
 
   function openCheckout() {
     setCheckoutOpen(true);
-    setCheckoutMessage("");
+    setPaymentNotice(null);
     setOrderSuccess(false);
   }
 
   function closeCheckout() {
     setCheckoutOpen(false);
-    setCheckoutMessage("");
+    setPaymentNotice(null);
   }
 
   function handlePaymentFieldChange<K extends keyof PaymentForm>(
@@ -213,22 +241,100 @@ function ClientView() {
     }));
   }
 
+  function showPaymentPopup(
+    type: PaymentNotice["type"],
+    title: string,
+    popupMessage: string,
+    note = ""
+  ) {
+    setPaymentNotice({
+      type,
+      title,
+      message: popupMessage,
+      note,
+    });
+  }
+
+  function handleCardholderNameChange(value: string) {
+    handlePaymentFieldChange("cardholderName", normalizeCardholderName(value));
+  }
+
+  function handleCardNumberChange(value: string) {
+    handlePaymentFieldChange("cardNumber", formatCardNumber(value));
+  }
+
+  function handleCvvChange(value: string) {
+    handlePaymentFieldChange("cvv", getDigits(value).slice(0, 4));
+  }
+
+  function validatePaymentForm() {
+    const cardholderName = paymentForm.cardholderName.trim();
+    const cardNumberDigits = getDigits(paymentForm.cardNumber);
+    const cvvDigits = getDigits(paymentForm.cvv);
+
+    if (!cardholderName || !cardNumberDigits || !paymentForm.expiry || !cvvDigits) {
+      return {
+        title: "Complete payment details",
+        message: "Please fill in cardholder name, card number, expiry month, and CVV.",
+      };
+    }
+
+    if (!/^[A-Za-z][A-Za-z .'-]{1,}$/.test(cardholderName)) {
+      return {
+        title: "Use English name only",
+        message: "Cardholder name must use English letters only, like Test User.",
+      };
+    }
+
+    if (cardNumberDigits.length < 13 || cardNumberDigits.length > 19) {
+      return {
+        title: "Invalid card number format",
+        message: "Card number must contain 13 to 19 digits. Fake test numbers are okay if the format is correct.",
+      };
+    }
+
+    if (!/^\d{4}-\d{2}$/.test(paymentForm.expiry)) {
+      return {
+        title: "Choose expiry month",
+        message: "Please select the card expiry month using the date picker.",
+      };
+    }
+
+    if (paymentForm.expiry < minExpiryMonth) {
+      return {
+        title: "Card date is expired",
+        message: "The expiry month cannot be in the past. Please choose the current month or a future month.",
+      };
+    }
+
+    if (!/^\d{3,4}$/.test(cvvDigits)) {
+      return {
+        title: "Invalid CVV format",
+        message: "CVV must be 3 or 4 digits only.",
+      };
+    }
+
+    return null;
+  }
+
   function submitDemoPayment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (
-      !paymentForm.cardholderName.trim() ||
-      !paymentForm.cardNumber.trim() ||
-      !paymentForm.expiry.trim() ||
-      !paymentForm.cvv.trim()
-    ) {
-      setCheckoutMessage("Please complete all demo payment fields.");
+    const validationError = validatePaymentForm();
+    if (validationError) {
+      showPaymentPopup("error", validationError.title, validationError.message);
       return;
     }
 
-    setCheckoutMessage("Demo payment successful. Order confirmed.");
+    showPaymentPopup(
+      "success",
+      "Payment approved",
+      "Your order was confirmed.",
+      "Note: demo payment only. No real payment was processed."
+    );
     setOrderSuccess(true);
     setCart({});
+    setCheckoutOpen(false);
     setPaymentForm({
       cardholderName: "",
       cardNumber: "",
@@ -502,6 +608,27 @@ function ClientView() {
           </section>
         )}
 
+        {paymentNotice && (
+          <div className="cx-payment-popup-backdrop" role="presentation">
+            <section
+              className={`cx-payment-popup ${paymentNotice.type}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="payment-popup-title"
+            >
+              <span className="cx-payment-popup-icon" aria-hidden="true">
+                {paymentNotice.type === "success" ? "OK" : "!"}
+              </span>
+              <h2 id="payment-popup-title">{paymentNotice.title}</h2>
+              <p>{paymentNotice.message}</p>
+              {paymentNotice.note && <p className="cx-payment-note">{paymentNotice.note}</p>}
+              <button type="button" onClick={() => setPaymentNotice(null)}>
+                Close
+              </button>
+            </section>
+          </div>
+        )}
+
         {canOrder && checkoutOpen && (
           <section className="cx-panel">
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
@@ -516,36 +643,47 @@ function ClientView() {
               </button>
             </div>
 
-            <form className="form-inline" onSubmit={submitDemoPayment}>
-              <label>Cardholder Name</label>
+            <form className="form-inline" onSubmit={submitDemoPayment} noValidate>
+              <label htmlFor="demo-cardholder-name">Cardholder Name</label>
               <input
+                id="demo-cardholder-name"
                 type="text"
+                autoComplete="cc-name"
                 value={paymentForm.cardholderName}
-                onChange={(e) => handlePaymentFieldChange("cardholderName", e.target.value)}
+                onChange={(e) => handleCardholderNameChange(e.target.value)}
                 placeholder="Test User"
               />
 
-              <label>Card Number</label>
+              <label htmlFor="demo-card-number">Card Number</label>
               <input
+                id="demo-card-number"
                 type="text"
+                inputMode="numeric"
+                autoComplete="cc-number"
                 value={paymentForm.cardNumber}
-                onChange={(e) => handlePaymentFieldChange("cardNumber", e.target.value)}
+                onChange={(e) => handleCardNumberChange(e.target.value)}
                 placeholder="4111 1111 1111 1111"
               />
 
-              <label>Expiry</label>
+              <label htmlFor="demo-card-expiry">Expiry Month</label>
               <input
-                type="text"
+                id="demo-card-expiry"
+                type="month"
+                min={minExpiryMonth}
+                autoComplete="cc-exp"
                 value={paymentForm.expiry}
                 onChange={(e) => handlePaymentFieldChange("expiry", e.target.value)}
-                placeholder="12/29"
               />
 
-              <label>CVV</label>
+              <label htmlFor="demo-card-cvv">CVV</label>
               <input
+                id="demo-card-cvv"
                 type="text"
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                maxLength={4}
                 value={paymentForm.cvv}
-                onChange={(e) => handlePaymentFieldChange("cvv", e.target.value)}
+                onChange={(e) => handleCvvChange(e.target.value)}
                 placeholder="123"
               />
 
@@ -560,12 +698,6 @@ function ClientView() {
                 Pay with Demo Payment
               </button>
             </form>
-
-            {checkoutMessage && (
-              <section className="cx-empty" style={{ marginTop: "12px" }}>
-                <p>{checkoutMessage}</p>
-              </section>
-            )}
           </section>
         )}
       </main>

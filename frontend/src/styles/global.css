@@ -4096,6 +4096,100 @@ button.ghost{
   background: #f8fafc;
 }
 
+.cx-payment-popup-backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15,23,42,0.42);
+  backdrop-filter: blur(7px);
+  animation: paymentPopupBackdrop .18s ease both;
+}
+
+.cx-payment-popup{
+  width: min(430px, 100%);
+  border: 1px solid #dbe3ef;
+  border-radius: 22px;
+  background:
+    radial-gradient(220px 150px at 100% 0%, rgba(249,115,22,0.14), transparent 70%),
+    #ffffff;
+  box-shadow: 0 28px 80px rgba(15,23,42,0.26);
+  padding: 26px;
+  text-align: center;
+  animation: paymentPopupIn .2s ease both;
+}
+
+.cx-payment-popup-icon{
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #c2410c;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cx-payment-popup.success .cx-payment-popup-icon{
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #047857;
+}
+
+.cx-payment-popup h2{
+  margin: 0 0 8px;
+  color: #0f172a;
+  text-align: center;
+  font-size: 25px;
+}
+
+.cx-payment-popup p{
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.cx-payment-popup .cx-payment-note{
+  margin-top: 6px;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cx-payment-popup button{
+  width: 100%;
+  margin-top: 20px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border: 1px solid #d24f09;
+  color: #fff;
+}
+
+@keyframes paymentPopupBackdrop{
+  from{
+    opacity: 0;
+  }
+  to{
+    opacity: 1;
+  }
+}
+
+@keyframes paymentPopupIn{
+  from{
+    opacity: 0;
+    transform: translateY(12px) scale(.98);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .cx-cart-head{
   display: flex;
   justify-content: space-between;
@@ -5187,6 +5281,21 @@ button.ghost{
 .cx-dark .cx-menu-snapshot div{
   background: rgba(15,23,42,0.74);
   border-color: rgba(148,163,184,0.26);
+  color: #cbd5e1;
+}
+
+.cx-dark .cx-payment-popup{
+  background:
+    radial-gradient(220px 150px at 100% 0%, rgba(249,115,22,0.20), transparent 70%),
+    #0f172a;
+  border-color: rgba(148,163,184,0.24);
+}
+
+.cx-dark .cx-payment-popup h2{
+  color: #f8fafc;
+}
+
+.cx-dark .cx-payment-popup p{
   color: #cbd5e1;
 }
 
