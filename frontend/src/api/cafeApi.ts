@@ -6,16 +6,17 @@ export type CafeData = {
   description?: string;
   hours?: string | { open?: string; close?: string };
   ownerName?: string;
+  contactEmail?: string;
   phone?: string;
   address?: string;
   city?: string;
   state?: string;
   status?: string;
+  adminComment?: string;
   zipCode?: string;
   logo?: string | null;
   logoUrl?: string | null;
   workingHours?: Record<string, { open: string; close: string }>;
-  theme?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -27,6 +28,8 @@ export type PublicCafeData = CafeData & {
       id?: string;
       name: string;
       price: string;
+      description?: string;
+      available?: boolean;
     }>;
   }>;
 };
@@ -114,7 +117,11 @@ export async function getAllCafes() {
   return data;
 }
 
-export async function updateCafeStatus(id: string, status: string) {
+export async function updateCafeStatus(
+  id: string,
+  status: string,
+  adminComment = ""
+) {
   const token = localStorage.getItem("token");
 
   const res = await fetch(`${BASE_URL}/${id}/status`, {
@@ -123,7 +130,7 @@ export async function updateCafeStatus(id: string, status: string) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, adminComment }),
   });
 
   const data = await res.json();

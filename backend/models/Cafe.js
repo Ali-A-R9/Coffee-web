@@ -18,20 +18,58 @@ const cafeSchema = new mongoose.Schema(
       unique: true,
     },
     description: String,
+    ownerName: String,
+    contactEmail: String,
+    phone: String,
+    address: String,
+    city: String,
+    state: String,
+    zipCode: String,
     hours: {
       open: String,
       close: String,
     },
-    logoUrl: String,
-    theme: {
-      type: String,
-      default: "light",
+    workingHours: {
+      monday: {
+        open: String,
+        close: String,
+      },
+      tuesday: {
+        open: String,
+        close: String,
+      },
+      wednesday: {
+        open: String,
+        close: String,
+      },
+      thursday: {
+        open: String,
+        close: String,
+      },
+      friday: {
+        open: String,
+        close: String,
+      },
+      saturday: {
+        open: String,
+        close: String,
+      },
+      sunday: {
+        open: String,
+        close: String,
+      },
     },
+    logoUrl: String,
     status: {
       type: String,
-      enum: ["Pending", "Active"],
+      enum: ["Pending", "Active", "Declined"],
       default: "Pending",
-},
+    },
+    adminComment: {
+      type: String,
+      default: "",
+      maxlength: 300,
+    },
   },
   {
     timestamps: true,

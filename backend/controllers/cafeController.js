@@ -12,10 +12,18 @@ async function buildCafeWithMenu(cafe) {
     name: cafe.name,
     slug: cafe.slug,
     description: cafe.description,
+    ownerName: cafe.ownerName,
+    contactEmail: cafe.contactEmail,
+    phone: cafe.phone,
+    address: cafe.address,
+    city: cafe.city,
+    state: cafe.state,
+    zipCode: cafe.zipCode,
     hours: cafe.hours,
+    workingHours: cafe.workingHours,
     logoUrl: cafe.logoUrl,
-    theme: cafe.theme,
     status: cafe.status,
+    adminComment: cafe.adminComment,
     createdAt: cafe.createdAt,
     updatedAt: cafe.updatedAt,
     menu: sections.map((section) => ({
@@ -88,7 +96,20 @@ exports.getMyCafe = async (req, res) => {
 exports.updateCafe = async (req, res) => {
   try {
     const ownerId = req.user.id;
-    const allowedUpdates = ["name", "description", "hours", "logoUrl", "theme"];
+    const allowedUpdates = [
+      "name",
+      "description",
+      "ownerName",
+      "contactEmail",
+      "phone",
+      "address",
+      "city",
+      "state",
+      "zipCode",
+      "hours",
+      "workingHours",
+      "logoUrl",
+    ];
     const updates = Object.fromEntries(
       Object.entries(req.body).filter(([key]) => allowedUpdates.includes(key))
     );
@@ -149,16 +170,27 @@ exports.getPublicCafes = async (_req, res) => {
 exports.updateCafeStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    const allowedStatuses = ["Pending", "Active"];
+    const { status, adminComment } = req.body;
+    const allowedStatuses = ["Pending", "Active", "Declined"];
 
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid cafe status" });
     }
 
+    const trimmedComment =
+      typeof adminComment === "string" ? adminComment.trim().slice(0, 300) : "";
+
+    const updates = {
+      status,
+      adminComment:
+        status === "Declined"
+          ? trimmedComment || "Your cafe needs changes before it can be approved."
+          : "",
+    };
+
     const cafe = await Cafe.findByIdAndUpdate(
       id,
-      { status },
+      updates,
       { new: true, runValidators: true }
     ).populate("ownerId", "email fullName");
 
