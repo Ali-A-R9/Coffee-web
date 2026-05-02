@@ -88,12 +88,14 @@ exports.getMenu = async (req, res) => {
 
     const result = sections.map((section) => ({
       name: section.title,
+      visible: section.visible !== false,
       items: items
         .filter((item) => item.sectionId.toString() === section._id.toString())
         .map((item) => ({
           id: item._id,
           name: item.name,
           price: item.price,
+          visible: item.visible !== false,
         })),
     }));
 
@@ -127,6 +129,7 @@ exports.saveMenu = async (req, res) => {
       const newSection = await MenuSection.create({
         cafeId: cafe._id,
         title: section.name.trim(),
+        visible: section.visible !== false,
       });
 
       for (const item of section.items) {
@@ -135,6 +138,7 @@ exports.saveMenu = async (req, res) => {
           sectionId: newSection._id,
           name: item.name.trim(),
           price: normalizePrice(item.price),
+          visible: item.visible !== false,
         });
       }
     }

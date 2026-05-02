@@ -21,6 +21,28 @@ const cafeSchema = new mongoose.Schema(
     ownerName: String,
     contactEmail: String,
     phone: String,
+    socialLinks: {
+      instagram: {
+        type: String,
+        default: "",
+      },
+      x: {
+        type: String,
+        default: "",
+      },
+      tiktok: {
+        type: String,
+        default: "",
+      },
+      snapchat: {
+        type: String,
+        default: "",
+      },
+      website: {
+        type: String,
+        default: "",
+      },
+    },
     address: String,
     city: String,
     state: String,

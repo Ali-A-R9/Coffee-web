@@ -11,6 +11,10 @@ const menuSectionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    visible: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     collection: "menusections",

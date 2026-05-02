@@ -14,6 +14,10 @@ const menuItemSchema = new mongoose.Schema(
     },
     name: String,
     price: String,
+    visible: {
+      type: Boolean,
+      default: true,
+    },
   },
   {
     collection: "menuitems",
