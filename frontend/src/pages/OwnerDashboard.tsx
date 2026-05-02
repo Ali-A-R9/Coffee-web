@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Ban,
+  CheckCircle2,
+  Clock3,
   Coffee,
   Eye,
   Home,
@@ -11,7 +14,9 @@ import {
   Palette,
   Plus,
   QrCode,
+  ReceiptText,
   Sun,
+  Truck,
   Upload,
   User,
 } from "lucide-react";
@@ -22,12 +27,22 @@ import {
   getMyCafe,
   updateCafe,
   type CafeData,
+  type CafeSocialLinks,
 } from "../api/cafeApi";
 import { getMenu, saveMenu } from "../api/menuApi";
+import {
+  getOwnerOrders,
+  updateOwnerOrderStatus,
+  type CafeOrder,
+  type OrderStatus,
+} from "../api/orderApi";
 import { useUiTheme } from "../hooks/useUiTheme";
 import type { Category } from "../types/menu";
 
-type OwnerSection = "dashboard" | "profile" | "menu" | "theme" | "qr";
+type OwnerSection = "dashboard" | "profile" | "menu" | "orders" | "theme" | "qr";
+type OwnerOrderFilter = "all" | OrderStatus;
+type OwnerOrderSort = "recent" | "oldest" | "az" | "status";
+type OwnerOrderPeriod = "all" | "today" | "month";
 
 type WorkingHours = {
   open: string;
@@ -64,6 +79,32 @@ const WEEK_DAYS: Array<{ key: Weekday; label: string }> = [
   { key: "saturday", label: "Saturday" },
   { key: "sunday", label: "Sunday" },
 ];
+
+const ORDER_STATUS_OPTIONS: OrderStatus[] = ["Placed", "On the way", "Delivered", "Cancelled"];
+const ORDER_STATUS_RANK: Record<OrderStatus, number> = {
+  Placed: 1,
+  "On the way": 2,
+  Delivered: 3,
+  Cancelled: 4,
+};
+const SOCIAL_LINK_FIELDS: Array<{
+  key: keyof CafeSocialLinks;
+  label: string;
+  placeholder: string;
+}> = [
+  { key: "instagram", label: "Instagram", placeholder: "@yourcafe or instagram.com/yourcafe" },
+  { key: "x", label: "X / Twitter", placeholder: "@yourcafe or x.com/yourcafe" },
+  { key: "tiktok", label: "TikTok", placeholder: "@yourcafe or tiktok.com/@yourcafe" },
+  { key: "snapchat", label: "Snapchat", placeholder: "@yourcafe or snapchat.com/add/yourcafe" },
+  { key: "website", label: "Website", placeholder: "https://yourcafe.com" },
+];
+const EMPTY_SOCIAL_LINKS: Required<CafeSocialLinks> = {
+  instagram: "",
+  x: "",
+  tiktok: "",
+  snapchat: "",
+  website: "",
+};
 
 function buildWeeklyHours(baseHours: WorkingHours = DEFAULT_HOURS): WeeklyHours {
   return WEEK_DAYS.reduce((result, day) => {
@@ -113,6 +154,71 @@ function formatTimestamp(value?: string) {
   return date.toLocaleString();
 }
 
+function formatOrderTotal(value: number) {
+  return `${value.toFixed(2)} SAR`;
+}
+
+function normalizeSocialLinks(socialLinks?: CafeSocialLinks): Required<CafeSocialLinks> {
+  return {
+    instagram: socialLinks?.instagram || "",
+    x: socialLinks?.x || "",
+    tiktok: socialLinks?.tiktok || "",
+    snapchat: socialLinks?.snapchat || "",
+    website: socialLinks?.website || "",
+  };
+}
+
+function trimSocialLinks(socialLinks: CafeSocialLinks): Required<CafeSocialLinks> {
+  return {
+    instagram: socialLinks.instagram?.trim() || "",
+    x: socialLinks.x?.trim() || "",
+    tiktok: socialLinks.tiktok?.trim() || "",
+    snapchat: socialLinks.snapchat?.trim() || "",
+    website: socialLinks.website?.trim() || "",
+  };
+}
+
+function isValidContactPhone(value: string) {
+  return /^\+?[0-9][0-9\s().-]{6,19}$/.test(value.trim());
+}
+
+function hasCompleteLocation(address: string, city: string, state: string, zipCode: string) {
+  return Boolean(address.trim() && city.trim() && state.trim() && zipCode.trim());
+}
+
+function getOwnerOrderStatusClass(status: OrderStatus) {
+  return `owner-order-status ${status.toLowerCase().replace(/\s+/g, "-")}`;
+}
+
+function formatOrderAddress(order: CafeOrder) {
+  return [
+    order.clientAddress?.line1,
+    order.clientAddress?.city,
+    order.clientAddress?.region,
+    order.clientAddress?.postalCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function isSameDay(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
+}
+
+function isSameMonth(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+
+  return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth();
+}
+
 function buildPublicUrl(cafe: CafeData | null, name: string) {
   const slug =
     cafe?.slug ||
@@ -145,6 +251,8 @@ function OwnerDashboard() {
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useUiTheme("owner-dashboard-theme");
   const currentUser = getCurrentUser();
+  const currentUserEmail = currentUser?.email || "";
+  const currentUserFullName = currentUser?.fullName || "";
   const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [cafe, setCafe] = useState<CafeData | null>(null);
@@ -158,6 +266,8 @@ function OwnerDashboard() {
   const [ownerName, setOwnerName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [socialLinks, setSocialLinks] =
+    useState<Required<CafeSocialLinks>>(EMPTY_SOCIAL_LINKS);
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [stateRegion, setStateRegion] = useState("");
@@ -166,8 +276,16 @@ function OwnerDashboard() {
   const [hours, setHours] = useState<WorkingHours>(EMPTY_HOURS);
   const [weeklyHours, setWeeklyHours] = useState<WeeklyHours>(() => buildWeeklyHours());
   const [profileMessage, setProfileMessage] = useState("");
+  const [profileMessageType, setProfileMessageType] = useState<"success" | "error" | "">("");
   const [ownerToast, setOwnerToast] = useState("");
   const [menuMessage, setMenuMessage] = useState("");
+  const [orders, setOrders] = useState<CafeOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersMessage, setOrdersMessage] = useState("");
+  const [orderFilter, setOrderFilter] = useState<OwnerOrderFilter>("all");
+  const [orderPeriod, setOrderPeriod] = useState<OwnerOrderPeriod>("all");
+  const [orderSort, setOrderSort] = useState<OwnerOrderSort>("recent");
+  const [selectedOrder, setSelectedOrder] = useState<CafeOrder | null>(null);
 
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
@@ -201,7 +319,8 @@ function OwnerDashboard() {
     name.trim() &&
       description.trim() &&
       contactEmail.trim() &&
-      (address.trim() || city.trim())
+      isValidContactPhone(phone) &&
+      hasCompleteLocation(address, city, stateRegion, zipCode)
   );
   const hoursReady = WEEK_DAYS.some((day) => {
     const dayHours = weeklyHours[day.key];
@@ -218,16 +337,55 @@ function OwnerDashboard() {
   ];
   const readinessCount = readinessItems.filter((item) => item.done).length;
   const ownerLayoutClass = `owner-layout ${isDark ? "owner-dark" : ""}`;
+  const orderCounts = useMemo(() => {
+    return {
+      all: orders.length,
+      placed: orders.filter((order) => order.status === "Placed").length,
+      onTheWay: orders.filter((order) => order.status === "On the way").length,
+      delivered: orders.filter((order) => order.status === "Delivered").length,
+      cancelled: orders.filter((order) => order.status === "Cancelled").length,
+      today: orders.filter((order) => isSameDay(order.createdAt)).length,
+      month: orders.filter((order) => isSameMonth(order.createdAt)).length,
+    };
+  }, [orders]);
+  const visibleOrders = useMemo(() => {
+    const filtered = orders.filter((order) => {
+      const matchesStatus = orderFilter === "all" || order.status === orderFilter;
+      const matchesPeriod =
+        orderPeriod === "all" ||
+        (orderPeriod === "today" && isSameDay(order.createdAt)) ||
+        (orderPeriod === "month" && isSameMonth(order.createdAt));
 
-  function syncCafeState(data: CafeData | null) {
+      return matchesStatus && matchesPeriod;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (orderSort === "oldest") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+
+      if (orderSort === "az") {
+        return a.clientName.localeCompare(b.clientName);
+      }
+
+      if (orderSort === "status") {
+        return ORDER_STATUS_RANK[a.status] - ORDER_STATUS_RANK[b.status];
+      }
+
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [orderFilter, orderPeriod, orderSort, orders]);
+
+  const syncCafeState = useCallback((data: CafeData | null) => {
     setCafe(data);
 
     if (!data) {
       setName("");
       setDescription("");
-      setOwnerName(currentUser?.fullName || "");
-      setContactEmail(currentUser?.email || "");
+      setOwnerName(currentUserFullName);
+      setContactEmail(currentUserEmail);
       setPhone("");
+      setSocialLinks(EMPTY_SOCIAL_LINKS);
       setAddress("");
       setCity("");
       setStateRegion("");
@@ -243,9 +401,10 @@ function OwnerDashboard() {
 
     setName(data.name || "");
     setDescription(data.description || "");
-    setOwnerName(data.ownerName || currentUser?.fullName || "");
-    setContactEmail(data.contactEmail || currentUser?.email || "");
+    setOwnerName(data.ownerName || currentUserFullName);
+    setContactEmail(data.contactEmail || currentUserEmail);
     setPhone(data.phone || "");
+    setSocialLinks(normalizeSocialLinks(data.socialLinks));
     setAddress(data.address || "");
     setCity(data.city || "");
     setStateRegion(data.state || "");
@@ -253,34 +412,50 @@ function OwnerDashboard() {
     setLogoUrl(data.logoUrl || "");
     setHours(nextHours.open || nextHours.close ? nextHours : nextWeeklyHours.monday);
     setWeeklyHours(nextWeeklyHours);
-  }
+  }, [currentUserEmail, currentUserFullName]);
 
-  async function loadCafeData() {
+  const loadOwnerOrders = useCallback(async (cafeId = "") => {
+    try {
+      setOrdersLoading(true);
+      setOrdersMessage("");
+      const data = await getOwnerOrders(cafeId);
+      setOrders(data);
+    } catch (error) {
+      setOrdersMessage(error instanceof Error ? error.message : "Failed to load orders.");
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  const loadCafeData = useCallback(async () => {
     try {
       setLoadError("");
       const data = await getMyCafe();
       syncCafeState(data);
+      loadOwnerOrders(data?._id);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Failed to load cafe");
       syncCafeState(null);
+      loadOwnerOrders("");
     } finally {
       setLoading(false);
     }
-  }
+  }, [loadOwnerOrders, syncCafeState]);
 
-  async function loadMenuData() {
+  const loadMenuData = useCallback(async () => {
     try {
       const data = await getMenu();
       setMenuData(Array.isArray(data) ? data : []);
     } catch {
       setMenuData([]);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadCafeData();
     loadMenuData();
-  }, []);
+  }, [loadCafeData, loadMenuData]);
 
   useEffect(() => {
     if (newItemCategory >= menuData.length && menuData.length > 0) {
@@ -303,6 +478,24 @@ function OwnerDashboard() {
     navigate("/");
   }
 
+  async function changeOrderStatus(order: CafeOrder, status: OrderStatus) {
+    try {
+      const updatedOrder = await updateOwnerOrderStatus(order._id, status);
+      setOrders((prev) =>
+        prev.map((item) => (item._id === updatedOrder._id ? updatedOrder : item))
+      );
+      setSelectedOrder((current) =>
+        current?._id === updatedOrder._id ? updatedOrder : current
+      );
+      setOrdersMessage(`Order ${updatedOrder.orderNumber} updated to ${updatedOrder.status}.`);
+      setOwnerToast(`Order ${updatedOrder.orderNumber} is now ${updatedOrder.status}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update order status.";
+      setOrdersMessage(message);
+      setOwnerToast(message);
+    }
+  }
+
   async function handleCreateCafe() {
     const trimmedName = createName.trim();
 
@@ -318,6 +511,7 @@ function OwnerDashboard() {
       });
 
       syncCafeState(res.cafe);
+      loadOwnerOrders(res.cafe?._id);
       setCreateMessage("Cafe created successfully.");
       setCreateName("");
       setCreateDescription("");
@@ -332,17 +526,38 @@ function OwnerDashboard() {
     if (!name.trim()) {
       const message = "Cafe name is required.";
       setProfileMessage(message);
+      setProfileMessageType("error");
+      setOwnerToast(message);
+      return;
+    }
+
+    if (!isValidContactPhone(phone)) {
+      const message =
+        "Contact phone number is required. Use digits and an optional country code, like +966 5x xxx xxxx.";
+      setProfileMessage(message);
+      setProfileMessageType("error");
+      setOwnerToast(message);
+      return;
+    }
+
+    if (!hasCompleteLocation(address, city, stateRegion, zipCode)) {
+      const message =
+        "Cafe location is required. Add address, city, state/region, and zip code so customers can find you.";
+      setProfileMessage(message);
+      setProfileMessageType("error");
       setOwnerToast(message);
       return;
     }
 
     try {
+      const trimmedSocialLinks = trimSocialLinks(socialLinks);
       const res = await updateCafe({
         name: name.trim(),
         description: description.trim(),
         ownerName: ownerName.trim(),
         contactEmail: contactEmail.trim(),
         phone: phone.trim(),
+        socialLinks: trimmedSocialLinks,
         address: address.trim(),
         city: city.trim(),
         state: stateRegion.trim(),
@@ -357,13 +572,22 @@ function OwnerDashboard() {
 
       syncCafeState(res.cafe);
       setProfileMessage("Profile updated successfully.");
+      setProfileMessageType("success");
       setOwnerToast("Profile saved successfully.");
     } catch (error) {
       setProfileMessage(
         error instanceof Error ? error.message : "Failed to update profile"
       );
+      setProfileMessageType("error");
       setOwnerToast("");
     }
+  }
+
+  function updateSocialLink(field: keyof CafeSocialLinks, value: string) {
+    setSocialLinks((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   }
 
   function updateWeeklyHours(day: Weekday, field: keyof WorkingHours, value: string) {
@@ -388,6 +612,7 @@ function OwnerDashboard() {
     setWeeklyHours(buildWeeklyHours(mondayHours));
     setHours(mondayHours);
     setProfileMessage("Monday hours copied to the full week. Click Save Profile to publish.");
+    setProfileMessageType("success");
   }
 
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -397,12 +622,14 @@ function OwnerDashboard() {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       setProfileMessage("Please upload a JPG, PNG, or WebP image.");
+      setProfileMessageType("error");
       e.target.value = "";
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
       setProfileMessage("Logo image must be 2MB or smaller.");
+      setProfileMessageType("error");
       e.target.value = "";
       return;
     }
@@ -412,10 +639,12 @@ function OwnerDashboard() {
       if (typeof reader.result === "string") {
         setLogoUrl(reader.result);
         setProfileMessage("Logo attached. Click Save Profile to publish it.");
+        setProfileMessageType("success");
       }
     };
     reader.onerror = () => {
       setProfileMessage("Could not read this logo file. Please try another image.");
+      setProfileMessageType("error");
     };
     reader.readAsDataURL(file);
   }
@@ -462,7 +691,7 @@ function OwnerDashboard() {
 
     const updated: Category[] = [
       ...menuData,
-      { name: trimmedCategory, items: [] },
+      { name: trimmedCategory, visible: true, items: [] },
     ];
 
     setMenuMessage("");
@@ -514,7 +743,7 @@ function OwnerDashboard() {
 
       return {
         ...cat,
-        items: [...cat.items, { name: trimmedName, price: trimmedPrice }],
+        items: [...cat.items, { name: trimmedName, price: trimmedPrice, visible: true }],
       };
     });
 
@@ -543,6 +772,59 @@ function OwnerDashboard() {
 
     setMenuMessage("");
     persistMenu(updated, "Item deleted successfully.");
+  }
+
+  function toggleCategoryVisibility(categoryIndex: number) {
+    const category = menuData[categoryIndex];
+    if (!category) return;
+
+    const willBeVisible = category.visible === false;
+    const updated: Category[] = menuData.map((cat, index) => {
+      if (index !== categoryIndex) return cat;
+
+      return {
+        ...cat,
+        visible: willBeVisible,
+      };
+    });
+
+    setMenuMessage("");
+    persistMenu(
+      updated,
+      `${category.name} is now ${
+        willBeVisible ? "shown to clients" : "hidden from clients"
+      } successfully.`
+    );
+  }
+
+  function toggleItemVisibility(categoryIndex: number, itemIndex: number) {
+    const item = menuData[categoryIndex]?.items[itemIndex];
+    if (!item) return;
+
+    const willBeVisible = item.visible === false;
+    const updated: Category[] = menuData.map((category, index) => {
+      if (index !== categoryIndex) return category;
+
+      return {
+        ...category,
+        items: category.items.map((menuItem, menuItemIndex) => {
+          if (menuItemIndex !== itemIndex) return menuItem;
+
+          return {
+            ...menuItem,
+            visible: willBeVisible,
+          };
+        }),
+      };
+    });
+
+    setMenuMessage("");
+    persistMenu(
+      updated,
+      `${item.name} is now ${
+        willBeVisible ? "shown to clients" : "hidden from clients"
+      } successfully.`
+    );
   }
 
   function removeCategory(categoryIndex: number) {
@@ -690,6 +972,7 @@ function OwnerDashboard() {
     { key: "dashboard", label: "Dashboard", icon: <Home size={18} /> },
     { key: "profile", label: "Cafe Profile", icon: <User size={18} /> },
     { key: "menu", label: "Menu Management", icon: <Menu size={18} /> },
+    { key: "orders", label: "Orders", icon: <ReceiptText size={18} /> },
     { key: "theme", label: "Theme Selection", icon: <Palette size={18} /> },
     { key: "qr", label: "QR Code", icon: <QrCode size={18} /> },
   ];
@@ -879,6 +1162,11 @@ function OwnerDashboard() {
                 <span>Menu Items</span>
               </div>
               <div className="owner-stat-card">
+                <ReceiptText size={20} />
+                <strong>{orderCounts.all}</strong>
+                <span>Orders</span>
+              </div>
+              <div className="owner-stat-card">
                 <Eye size={20} />
                 <strong>{formatTimestamp(cafe.updatedAt)}</strong>
                 <span>Last Updated</span>
@@ -1020,13 +1308,15 @@ function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label htmlFor="owner-phone">Phone Number</label>
+                    <label htmlFor="owner-phone">Phone Number <span>*</span></label>
                     <input
                       id="owner-phone"
+                      inputMode="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+966 5x xxx xxxx"
                     />
+                    <small>Required so customers can contact your cafe directly.</small>
                   </div>
 
                   <div className="full">
@@ -1044,12 +1334,42 @@ function OwnerDashboard() {
 
               <div className="owner-profile-card">
                 <div className="owner-profile-card-head">
-                  <h2>Location</h2>
+                  <div>
+                    <h2>Social Media Accounts</h2>
+                    <p>Optional. If you add accounts, customers will see them in your contact section.</p>
+                  </div>
+                </div>
+
+                <div className="owner-form-grid owner-profile-grid owner-social-grid">
+                  {SOCIAL_LINK_FIELDS.map((field) => (
+                    <div key={field.key}>
+                      <label htmlFor={`owner-social-${field.key}`}>{field.label}</label>
+                      <input
+                        id={`owner-social-${field.key}`}
+                        value={socialLinks[field.key] || ""}
+                        onChange={(e) => updateSocialLink(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                      />
+                    </div>
+                  ))}
+                  <p className="owner-social-help full">
+                    Use a full URL or account handle. Leave every field blank if you do not want
+                    to show social media links to customers.
+                  </p>
+                </div>
+              </div>
+
+              <div className="owner-profile-card">
+                <div className="owner-profile-card-head">
+                  <div>
+                    <h2>Location <span>*</span></h2>
+                    <p>Required. Customers see this in the cafe menu Visit Us section.</p>
+                  </div>
                 </div>
 
                 <div className="owner-form-grid owner-profile-grid">
                   <div className="full">
-                    <label htmlFor="owner-address">Address</label>
+                    <label htmlFor="owner-address">Address <span>*</span></label>
                     <input
                       id="owner-address"
                       value={address}
@@ -1059,7 +1379,7 @@ function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label htmlFor="owner-city">City</label>
+                    <label htmlFor="owner-city">City <span>*</span></label>
                     <input
                       id="owner-city"
                       value={city}
@@ -1069,7 +1389,7 @@ function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label htmlFor="owner-state">State / Region</label>
+                    <label htmlFor="owner-state">State / Region <span>*</span></label>
                     <input
                       id="owner-state"
                       value={stateRegion}
@@ -1079,7 +1399,7 @@ function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label htmlFor="owner-zip">Zip Code</label>
+                    <label htmlFor="owner-zip">Zip Code <span>*</span></label>
                     <input
                       id="owner-zip"
                       value={zipCode}
@@ -1132,7 +1452,7 @@ function OwnerDashboard() {
               <button type="button" className="owner-primary" onClick={saveProfile}>
                 Save Profile
               </button>
-              <p className={profileMessage ? "success" : "small"}>{profileMessage || " "}</p>
+              <p className={profileMessageType || "small"}>{profileMessage || " "}</p>
             </div>
           </section>
         )}
@@ -1210,18 +1530,37 @@ function OwnerDashboard() {
                   {menuData.length === 0 && (
                     <p className="owner-empty-state">No categories yet. Add one to begin.</p>
                   )}
-                  {menuData.map((category, index) => (
-                    <li key={category.name + index}>
-                      <button
-                        type="button"
-                        className={newItemCategory === index ? "active" : ""}
-                        onClick={() => setNewItemCategory(index)}
-                      >
-                        <span>{category.name}</span>
-                        <small>{category.items.length} items</small>
-                      </button>
-                    </li>
-                  ))}
+                  {menuData.map((category, index) => {
+                    const isCategoryShown = category.visible !== false;
+                    const categoryButtonClass = [
+                      newItemCategory === index ? "active" : "",
+                      isCategoryShown ? "" : "is-hidden",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+
+                    return (
+                      <li key={category.name + index}>
+                        <button
+                          type="button"
+                          className={categoryButtonClass}
+                          onClick={() => setNewItemCategory(index)}
+                        >
+                          <span>
+                            {category.name}
+                            <em
+                              className={`owner-visibility ${
+                                isCategoryShown ? "shown" : "hidden"
+                              }`}
+                            >
+                              {isCategoryShown ? "Shown" : "Hidden"}
+                            </em>
+                          </span>
+                          <small>{category.items.length} items</small>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
 
@@ -1244,6 +1583,24 @@ function OwnerDashboard() {
 
                 {menuData[newItemCategory] && (
                   <div className="owner-item-actions owner-category-actions">
+                    <span
+                      className={`owner-visibility ${
+                        menuData[newItemCategory].visible !== false ? "shown" : "hidden"
+                      }`}
+                    >
+                      {menuData[newItemCategory].visible !== false
+                        ? "Shown to clients"
+                        : "Hidden from clients"}
+                    </span>
+                    <button
+                      type="button"
+                      className="owner-secondary"
+                      onClick={() => toggleCategoryVisibility(newItemCategory)}
+                    >
+                      {menuData[newItemCategory].visible !== false
+                        ? "Hide Category"
+                        : "Show Category"}
+                    </button>
                     <button
                       type="button"
                       className="owner-secondary"
@@ -1300,8 +1657,14 @@ function OwnerDashboard() {
 
                 <div className="owner-items">
                   {menuData[newItemCategory]?.items?.length ? (
-                    menuData[newItemCategory].items.map((item, index) => (
-                      <div key={item.name + index} className="owner-item-row">
+                    menuData[newItemCategory].items.map((item, index) => {
+                      const isItemShown = item.visible !== false;
+
+                      return (
+                        <div
+                          key={item.name + index}
+                          className={`owner-item-row${isItemShown ? "" : " is-hidden"}`}
+                        >
                         {editingItem?.categoryIndex === newItemCategory &&
                         editingItem.itemIndex === index ? (
                           <>
@@ -1350,7 +1713,16 @@ function OwnerDashboard() {
                         ) : (
                           <>
                             <div>
-                              <strong>{item.name}</strong>
+                              <div className="owner-item-heading">
+                                <strong>{item.name}</strong>
+                                <span
+                                  className={`owner-visibility ${
+                                    isItemShown ? "shown" : "hidden"
+                                  }`}
+                                >
+                                  {isItemShown ? "Shown" : "Hidden"}
+                                </span>
+                              </div>
                               <p>{item.description || "Saved in your menu database."}</p>
                             </div>
 
@@ -1359,6 +1731,13 @@ function OwnerDashboard() {
                                 <span>SAR</span>
                                 {item.price}
                               </div>
+                              <button
+                                type="button"
+                                className="owner-secondary"
+                                onClick={() => toggleItemVisibility(newItemCategory, index)}
+                              >
+                                {isItemShown ? "Hide" : "Show"}
+                              </button>
                               <button
                                 type="button"
                                 className="owner-secondary"
@@ -1377,7 +1756,8 @@ function OwnerDashboard() {
                           </>
                         )}
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="owner-empty-state">No items yet for this category.</p>
                   )}
@@ -1396,6 +1776,252 @@ function OwnerDashboard() {
             >
               {menuMessage || " "}
             </p>
+          </section>
+        )}
+
+        {activeSection === "orders" && (
+          <section>
+            <div className="owner-section-head">
+              <div>
+                <h1 className="owner-title">Orders</h1>
+                <p className="owner-subtitle">
+                  Manage customer orders for {name}, update delivery status, and review full order details.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="owner-secondary"
+                onClick={() => loadOwnerOrders(cafe?._id || "")}
+              >
+                <ReceiptText size={14} />
+                Refresh Orders
+              </button>
+            </div>
+
+            <div className="owner-stats owner-order-stats">
+              <div className="owner-stat-card">
+                <ReceiptText size={20} />
+                <strong>{orderCounts.month}</strong>
+                <span>Orders This Month</span>
+              </div>
+              <div className="owner-stat-card">
+                <Clock3 size={20} />
+                <strong>{orderCounts.today}</strong>
+                <span>Orders Today</span>
+              </div>
+              <div className="owner-stat-card">
+                <Truck size={20} />
+                <strong>{orderCounts.onTheWay}</strong>
+                <span>On the Way</span>
+              </div>
+              <div className="owner-stat-card">
+                <CheckCircle2 size={20} />
+                <strong>{orderCounts.delivered}</strong>
+                <span>Delivered</span>
+              </div>
+              <div className="owner-stat-card">
+                <Ban size={20} />
+                <strong>{orderCounts.cancelled}</strong>
+                <span>Cancelled</span>
+              </div>
+            </div>
+
+            <div className="owner-panel owner-orders-panel">
+              <div className="owner-panel-heading">
+                <div>
+                  <h2>Live Cafe Orders</h2>
+                  <p>Orders are shared with the client account, so every status update appears in their Orders page.</p>
+                </div>
+                <span className="owner-count-pill">{visibleOrders.length} shown</span>
+              </div>
+
+              <div className="owner-order-tools">
+                <label htmlFor="owner-order-period">
+                  Time period
+                  <select
+                    id="owner-order-period"
+                    value={orderPeriod}
+                    onChange={(e) => setOrderPeriod(e.target.value as OwnerOrderPeriod)}
+                  >
+                    <option value="all">All dates</option>
+                    <option value="today">Today only</option>
+                    <option value="month">This month</option>
+                  </select>
+                </label>
+
+                <label htmlFor="owner-order-filter">
+                  Status
+                  <select
+                    id="owner-order-filter"
+                    value={orderFilter}
+                    onChange={(e) => setOrderFilter(e.target.value as OwnerOrderFilter)}
+                  >
+                    <option value="all">All statuses</option>
+                    {ORDER_STATUS_OPTIONS.map((statusOption) => (
+                      <option value={statusOption} key={statusOption}>
+                        {statusOption}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label htmlFor="owner-order-sort">
+                  Sort
+                  <select
+                    id="owner-order-sort"
+                    value={orderSort}
+                    onChange={(e) => setOrderSort(e.target.value as OwnerOrderSort)}
+                  >
+                    <option value="recent">Recent first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="az">Client A-Z</option>
+                    <option value="status">Status flow</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="owner-order-filter-chips" aria-label="Quick order status filters">
+                <button
+                  type="button"
+                  className={orderFilter === "all" ? "active" : ""}
+                  onClick={() => setOrderFilter("all")}
+                >
+                  All <span>{orderCounts.all}</span>
+                </button>
+                <button
+                  type="button"
+                  className={orderFilter === "Delivered" ? "active" : ""}
+                  onClick={() => setOrderFilter("Delivered")}
+                >
+                  Delivered <span>{orderCounts.delivered}</span>
+                </button>
+                <button
+                  type="button"
+                  className={orderFilter === "On the way" ? "active" : ""}
+                  onClick={() => setOrderFilter("On the way")}
+                >
+                  On the Way <span>{orderCounts.onTheWay}</span>
+                </button>
+                <button
+                  type="button"
+                  className={orderFilter === "Cancelled" ? "active" : ""}
+                  onClick={() => setOrderFilter("Cancelled")}
+                >
+                  Cancelled <span>{orderCounts.cancelled}</span>
+                </button>
+              </div>
+
+              {ordersMessage && (
+                <p className={ordersMessage.includes("updated") ? "success" : "error"}>
+                  {ordersMessage}
+                </p>
+              )}
+
+              {ordersLoading ? (
+                <p className="owner-empty-state">Loading orders from the database...</p>
+              ) : visibleOrders.length === 0 ? (
+                <p className="owner-empty-state">
+                  No orders in this view yet. New client orders will appear here automatically after checkout.
+                </p>
+              ) : (
+                <div className="owner-orders-list">
+                  {visibleOrders.map((order) => (
+                    <article className="owner-order-row" key={order._id}>
+                      <div>
+                        <strong>{order.orderNumber}</strong>
+                        <p>{formatTimestamp(order.createdAt)}</p>
+                      </div>
+                      <div>
+                        <strong>{order.clientName}</strong>
+                        <p>{order.clientEmail}</p>
+                      </div>
+                      <span className={getOwnerOrderStatusClass(order.status)}>{order.status}</span>
+                      <strong>{formatOrderTotal(order.total)}</strong>
+                      <button
+                        type="button"
+                        className="owner-secondary"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        View Order Details
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {selectedOrder && (
+              <div className="owner-panel owner-order-detail">
+                <div className="owner-panel-heading">
+                  <div>
+                    <h2>{selectedOrder.orderNumber}</h2>
+                    <p>{formatTimestamp(selectedOrder.createdAt)}</p>
+                  </div>
+                  <button type="button" className="owner-secondary" onClick={() => setSelectedOrder(null)}>
+                    Close Details
+                  </button>
+                </div>
+
+                <div className="owner-order-detail-grid">
+                  <div>
+                    <h3>Client</h3>
+                    <p><strong>Name:</strong> {selectedOrder.clientName}</p>
+                    <p><strong>Email:</strong> {selectedOrder.clientEmail}</p>
+                    <p><strong>Phone:</strong> {selectedOrder.clientAddress?.phone || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h3>Delivery Address</h3>
+                    <p>{formatOrderAddress(selectedOrder) || "No address provided"}</p>
+                  </div>
+                  <div>
+                    <h3>Payment</h3>
+                    <p><strong>Total:</strong> {formatOrderTotal(selectedOrder.total)}</p>
+                    <p><strong>Method:</strong> {selectedOrder.paymentMethod}</p>
+                    <p><strong>Status:</strong> <span className={getOwnerOrderStatusClass(selectedOrder.status)}>{selectedOrder.status}</span></p>
+                  </div>
+                </div>
+
+                <div className="owner-order-items">
+                  <h3>Order Items</h3>
+                  {selectedOrder.items.map((item) => (
+                    <div key={`${selectedOrder._id}-${item.itemId}-${item.name}`}>
+                      <span>{item.quantity}x {item.name}</span>
+                      <strong>{formatOrderTotal(item.price * item.quantity)}</strong>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="owner-order-status-actions">
+                  <button
+                    type="button"
+                    className="owner-danger"
+                    disabled={selectedOrder.status === "Cancelled" || selectedOrder.status === "Delivered"}
+                    onClick={() => changeOrderStatus(selectedOrder, "Cancelled")}
+                  >
+                    <Ban size={14} />
+                    Cancel Order
+                  </button>
+                  <button
+                    type="button"
+                    className="owner-secondary"
+                    disabled={selectedOrder.status === "On the way" || selectedOrder.status === "Delivered" || selectedOrder.status === "Cancelled"}
+                    onClick={() => changeOrderStatus(selectedOrder, "On the way")}
+                  >
+                    <Truck size={14} />
+                    On the Way
+                  </button>
+                  <button
+                    type="button"
+                    className="owner-primary"
+                    disabled={selectedOrder.status === "Delivered" || selectedOrder.status === "Cancelled"}
+                    onClick={() => changeOrderStatus(selectedOrder, "Delivered")}
+                  >
+                    <CheckCircle2 size={14} />
+                    Delivered
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
 
@@ -1423,6 +2049,20 @@ function OwnerDashboard() {
             <p className="owner-subtitle">
               Share this code with customers so scanning it opens your cafe menu directly.
             </p>
+
+            <div className="owner-panel owner-qr-guide">
+              <div>
+                <h2>How to Use This QR</h2>
+                <p>Use this flow when your cafe is ready to accept customer orders.</p>
+              </div>
+              <div className="owner-qr-steps">
+                <span>1. Print or display the QR</span>
+                <span>2. Customer scans it</span>
+                <span>3. Customer logs in or registers</span>
+                <span>4. Customer orders from your menu</span>
+                <span>5. You manage the order status</span>
+              </div>
+            </div>
 
             <div className="owner-qr-grid">
               <div className="owner-panel">

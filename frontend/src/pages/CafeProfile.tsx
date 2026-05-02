@@ -1,7 +1,26 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera } from "lucide-react";
-import { getMyCafe, updateCafe, type CafeData } from "../api/cafeApi";
+import { getMyCafe, updateCafe, type CafeData, type CafeSocialLinks } from "../api/cafeApi";
+
+const SOCIAL_LINK_FIELDS: Array<{
+  key: keyof CafeSocialLinks;
+  label: string;
+  placeholder: string;
+}> = [
+  { key: "instagram", label: "Instagram", placeholder: "@yourcafe" },
+  { key: "x", label: "X / Twitter", placeholder: "@yourcafe" },
+  { key: "tiktok", label: "TikTok", placeholder: "@yourcafe" },
+  { key: "snapchat", label: "Snapchat", placeholder: "@yourcafe" },
+  { key: "website", label: "Website", placeholder: "https://yourcafe.com" },
+];
+const EMPTY_SOCIAL_LINKS: Required<CafeSocialLinks> = {
+  instagram: "",
+  x: "",
+  tiktok: "",
+  snapchat: "",
+  website: "",
+};
 
 function formatHours(hours: CafeData["hours"]) {
   if (!hours) return { open: "", close: "" };
@@ -12,6 +31,34 @@ function formatHours(hours: CafeData["hours"]) {
   };
 }
 
+function normalizeSocialLinks(socialLinks?: CafeSocialLinks): Required<CafeSocialLinks> {
+  return {
+    instagram: socialLinks?.instagram || "",
+    x: socialLinks?.x || "",
+    tiktok: socialLinks?.tiktok || "",
+    snapchat: socialLinks?.snapchat || "",
+    website: socialLinks?.website || "",
+  };
+}
+
+function trimSocialLinks(socialLinks: CafeSocialLinks): Required<CafeSocialLinks> {
+  return {
+    instagram: socialLinks.instagram?.trim() || "",
+    x: socialLinks.x?.trim() || "",
+    tiktok: socialLinks.tiktok?.trim() || "",
+    snapchat: socialLinks.snapchat?.trim() || "",
+    website: socialLinks.website?.trim() || "",
+  };
+}
+
+function isValidContactPhone(value: string) {
+  return /^\+?[0-9][0-9\s().-]{6,19}$/.test(value.trim());
+}
+
+function hasCompleteLocation(address: string, city: string, state: string, zipCode: string) {
+  return Boolean(address.trim() && city.trim() && state.trim() && zipCode.trim());
+}
+
 function CafeProfile() {
   const navigate = useNavigate();
 
@@ -20,6 +67,13 @@ function CafeProfile() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [phone, setPhone] = useState("");
+  const [socialLinks, setSocialLinks] =
+    useState<Required<CafeSocialLinks>>(EMPTY_SOCIAL_LINKS);
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [stateRegion, setStateRegion] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
   const [message, setMessage] = useState("");
@@ -36,6 +90,12 @@ function CafeProfile() {
         if (data) {
           setName(data.name || "");
           setDescription(data.description || "");
+          setPhone(data.phone || "");
+          setSocialLinks(normalizeSocialLinks(data.socialLinks));
+          setAddress(data.address || "");
+          setCity(data.city || "");
+          setStateRegion(data.state || "");
+          setZipCode(data.zipCode || "");
 
           const hours = formatHours(data.hours);
           setOpenTime(hours.open);
@@ -83,10 +143,29 @@ function CafeProfile() {
       return;
     }
 
+    if (!isValidContactPhone(phone)) {
+      setMessage("Contact phone number is required. Use digits and an optional country code.");
+      setMessageType("error");
+      return;
+    }
+
+    if (!hasCompleteLocation(address, city, stateRegion, zipCode)) {
+      setMessage("Cafe location is required. Add address, city, state/region, and zip code.");
+      setMessageType("error");
+      return;
+    }
+
     try {
+      const trimmedSocialLinks = trimSocialLinks(socialLinks);
       const result = await updateCafe({
         name: name.trim(),
         description: description.trim(),
+        phone: phone.trim(),
+        socialLinks: trimmedSocialLinks,
+        address: address.trim(),
+        city: city.trim(),
+        state: stateRegion.trim(),
+        zipCode: zipCode.trim(),
         hours: {
           open: openTime.trim(),
           close: closeTime.trim(),
@@ -100,6 +179,13 @@ function CafeProfile() {
       setMessage(error instanceof Error ? error.message : "Failed to update cafe");
       setMessageType("error");
     }
+  }
+
+  function updateSocialLink(field: keyof CafeSocialLinks, value: string) {
+    setSocialLinks((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   }
 
   if (loading) return <p>Loading...</p>;
@@ -146,6 +232,42 @@ function CafeProfile() {
 
           <label>Description</label>
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+
+          <label>Phone Number *</label>
+          <input
+            inputMode="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+966 5x xxx xxxx"
+          />
+
+          <label>Social Media Accounts (Optional)</label>
+          {SOCIAL_LINK_FIELDS.map((field) => (
+            <input
+              key={field.key}
+              value={socialLinks[field.key] || ""}
+              onChange={(e) => updateSocialLink(field.key, e.target.value)}
+              placeholder={`${field.label}: ${field.placeholder}`}
+            />
+          ))}
+
+          <label>Location *</label>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Address"
+          />
+          <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
+          <input
+            value={stateRegion}
+            onChange={(e) => setStateRegion(e.target.value)}
+            placeholder="State / Region"
+          />
+          <input
+            value={zipCode}
+            onChange={(e) => setZipCode(e.target.value)}
+            placeholder="Zip Code"
+          />
 
           <label>Opening Time</label>
           <input value={openTime} onChange={(e) => setOpenTime(e.target.value)} />

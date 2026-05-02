@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Coffee, LayoutDashboard, ListChecks, LogOut, ShieldCheck, XCircle } from "lucide-react";
+import {
+  Coffee,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Moon,
+  ShieldCheck,
+  Sun,
+  XCircle,
+} from "lucide-react";
 import { logout } from "../api/authApi";
 import { getAllCafes, updateCafeStatus } from "../api/cafeApi";
+import { useUiTheme } from "../hooks/useUiTheme";
 
 type AdminCafe = {
   _id: string;
@@ -34,6 +44,7 @@ function getStatusClass(status?: string) {
 
 function Admin() {
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useUiTheme("admin-dashboard-theme");
   const [cafes, setCafes] = useState<AdminCafe[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState("");
@@ -131,7 +142,13 @@ function Admin() {
   }
 
   if (loading) {
-    return <h2 style={{ padding: "40px" }}>Loading admin dashboard...</h2>;
+    return (
+      <div className={`admin-layout admin-loading ${isDark ? "admin-dark" : ""}`}>
+        <main className="admin-main">
+          <h2>Loading admin dashboard...</h2>
+        </main>
+      </div>
+    );
   }
 
   const navItems: Array<{ key: AdminView; label: string; icon: React.ReactNode }> = [
@@ -142,7 +159,7 @@ function Admin() {
   ];
 
   return (
-    <div className="admin-layout">
+    <div className={`admin-layout ${isDark ? "admin-dark" : ""}`}>
       {toast && (
         <div className="owner-toast" role="status" aria-live="polite">
           {toast}
@@ -172,6 +189,16 @@ function Admin() {
                 <small>{counts[item.key]}</small>
               </button>
             ))}
+
+            <button
+              type="button"
+              className="admin-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch admin dashboard to light theme" : "Switch admin dashboard to dark theme"}
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{isDark ? "Light Theme" : "Dark Theme"}</span>
+            </button>
           </nav>
         </div>
 
