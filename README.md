@@ -144,6 +144,9 @@ PORT=5000
 MONGO_URI=mongodb+srv://<db_user>:<db_password>@<cluster>/<database>?retryWrites=true&w=majority&appName=<app_name>
 JWT_SECRET=replace_with_a_secure_secret
 CLIENT_URL=http://localhost:5173
+ADMIN_FULL_NAME=CafeSite Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=Admin@12345
 ```
 
 ### frontend/.env
@@ -156,6 +159,24 @@ VITE_API_URL=http://localhost:5000
 - `.env` files are ignored by Git and must not be pushed.
 - `node_modules/` and build output are ignored and should be regenerated locally.
 - Use a rotated MongoDB password if a password was ever shared in screenshots or chat.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` are optional, but recommended for a fresh database so graders can log in to `/admin`.
+
+### Admin Account for Grading
+
+The public register page creates `client` and `owner` accounts only. To create or refresh an admin account for a fresh MongoDB database, add `ADMIN_EMAIL` and `ADMIN_PASSWORD` to `backend/.env`, then start the backend:
+
+```bash
+cd backend
+npm start
+```
+
+After startup, log in with that admin email/password and open:
+
+```text
+http://localhost:5173/admin
+```
+
+Do not commit the real admin password. Keep it only in `backend/.env` or deployment environment variables.
 
 ---
 
@@ -364,6 +385,7 @@ Example response:
 ## ✅ Features Implemented
 
 - JWT authentication and protected role-based routes
+- Optional admin account bootstrap from backend environment variables
 - Owner cafe creation and profile management
 - Required phone and full cafe location validation
 - Optional social media links

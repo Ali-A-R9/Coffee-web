@@ -2,9 +2,9 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const seedAdminUser = require("./config/seedAdmin");
 
 dotenv.config();
-connectDB();
 
 const app = express();
 
@@ -48,6 +48,13 @@ app.use("/api", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  await connectDB();
+  await seedAdminUser();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer();
