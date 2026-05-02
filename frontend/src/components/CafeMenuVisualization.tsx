@@ -50,6 +50,16 @@ const WEEK_DAYS = [
   { key: "sunday", label: "Sunday" },
 ];
 
+const DAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
 function formatShortTime(value?: string) {
   if (!value) return "";
 
@@ -69,6 +79,53 @@ function formatHours(hours: MenuVisualCafe["hours"]) {
   if (typeof hours === "string") return hours || "Hours not available";
   if (!hours.open || !hours.close) return "Hours not available";
   return `${formatShortTime(hours.open)} - ${formatShortTime(hours.close)}`;
+}
+
+function timeToMinutes(value?: string) {
+  if (!value) return null;
+
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function getTodayHours(cafe: MenuVisualCafe) {
+  const todayKey = DAY_KEYS[new Date().getDay()];
+  const weeklyHours = todayKey ? cafe.workingHours?.[todayKey] : null;
+
+  if (weeklyHours?.open && weeklyHours?.close) return weeklyHours;
+  if (cafe.hours && typeof cafe.hours !== "string") return cafe.hours;
+  return null;
+}
+
+function getOpenState(cafe: MenuVisualCafe) {
+  const todayHours = getTodayHours(cafe);
+  const openMinutes = timeToMinutes(todayHours?.open);
+  const closeMinutes = timeToMinutes(todayHours?.close);
+
+  if (openMinutes === null || closeMinutes === null) {
+    return {
+      className: "closed",
+      label: "Hours not set",
+    };
+  }
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const isOpen =
+    openMinutes <= closeMinutes
+      ? nowMinutes >= openMinutes && nowMinutes <= closeMinutes
+      : nowMinutes >= openMinutes || nowMinutes <= closeMinutes;
+
+  return {
+    className: isOpen ? "open" : "closed",
+    label: isOpen ? "Open" : "Closed",
+  };
 }
 
 function formatSar(price: string) {
@@ -121,6 +178,9 @@ function CafeMenuVisualization({
   onAddItem,
 }: CafeMenuVisualizationProps) {
   const itemCount = getMenuItemCount(menu);
+  const openState = getOpenState(cafe);
+  const todayHours = getTodayHours(cafe);
+  const todayHoursLabel = formatHours(todayHours || cafe.hours);
   const visibleMenu =
     activeCategory === "all"
       ? menu
@@ -148,14 +208,11 @@ function CafeMenuVisualization({
             <MapPin size={13} /> {cafe.slug || "No public slug yet"}
           </span>
           <span>
-            <Clock3 size={13} /> {formatHours(cafe.hours)}
+            <Clock3 size={13} /> {todayHoursLabel}
           </span>
-          {cafe.status && (
-            <span className={cafe.status === "Active" ? "open" : "closed"}>
-              {context === "owner-preview" && cafe.status !== "Active"
-                ? "Pending admin approval"
-                : cafe.status}
-            </span>
+          <span className={openState.className}>{openState.label}</span>
+          {context === "owner-preview" && cafe.status && cafe.status !== "Active" && (
+            <span className="closed">Pending admin approval</span>
           )}
           <span>{menu.length} categories</span>
           <span>{itemCount} items</span>
@@ -171,7 +228,7 @@ function CafeMenuVisualization({
             <span>Items</span>
           </div>
           <div>
-            <strong>{formatHours(cafe.hours)}</strong>
+            <strong>{todayHoursLabel}</strong>
             <span>Today</span>
           </div>
         </div>
