@@ -38,8 +38,8 @@ function Login() {
         <div className="auth-side-content">
           <h1>Welcome Back</h1>
           <p>
-            Sign in to manage your cafe profile, menu, preview website,
-            and admin tools from one place.
+            Access your CafeSite account to manage cafes, explore menus,
+            and keep your workspace organized in one place.
           </p>
         </div>
       </div>
